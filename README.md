@@ -48,7 +48,9 @@
      SELECT id FROM auth.users WHERE email = '你的管理员邮箱@example.com';
      ```
    * *(安全建议)* 在 **Authentication -> Providers -> Email** 中关闭 `Allow new users to sign up`，防止陌生人注册账号。
-5. **获取连接密钥：** 点击左下角 **Project Settings（齿轮图标）-> API**，复制保存 **`Project URL`** 和 **`anon public` key**。
+5. **获取连接密钥（`Project URL` 与 `anon public` key）：**
+   * **获取 `Project URL`：** 点击左下角 **Project Settings（齿轮图标）-> Data API**（或 **General**），复制顶部的项目网址（格式严格为 `https://supabase.co`，**注意末尾不要包含 `/rest/v1` 后缀**）。
+   * **获取 `anon public` key：** 点击左侧 **Project Settings -> API Keys**，点击页面右上方的 **`View legacy API keys`**，复制 **`anon` `public`** 一栏中以 **`eyJ`** 开头的长密钥。
 
 ### 第 3 步：一键部署上线到 Vercel
 1. 使用 GitHub 账号登录 [Vercel](https://vercel.com)，点击 **Add New... -> Project**，导入你刚才 Fork 的仓库。
