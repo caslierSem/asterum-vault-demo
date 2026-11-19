@@ -18,6 +18,7 @@
 * **原子化换卡订单流转：** 创建「约换中」订单时自动锁定对应卡片的可用库存，防止超卖/超换；交易完成后一键扣除流出库存、增加流入库存；取消订单自动释放锁定数量，且表单草稿自动本地防丢。
 * **一键生成高清换卡海报：** 自动提取「多出（HAVE）」与「缺少（WANT）」卡片生成双栏换卡图，内置**北京东八区（UTC+8）精确生成时间戳**、支持手动调整主题排序与勾选剔除单卡，提供高清 JPEG 下载及纯净截图模式。
 * **访客口令与专属免密链接：** 支持在线随时修改或关闭访客口令，一键复制带暗号的专属分享链接（如 `https://你的域名/?code=暗号`），买家点开链接即可免输密码直接浏览，且地址栏自动抹除暗号防截图扩散。初始访客口令默认为 `plave2026`。
+* **支持添加到桌面（PWA 轻量应用体验）：** 无需下载安装传统 App，在手机（Safari / Chrome 浏览器点击「分享 -> 添加到主屏幕」）或电脑浏览器地址栏点击「安装/添加到桌面」，即可在桌面生成独立应用图标，全屏沉浸式打开管理卡册，操作体验媲美原生 App。
 
 ### 2. 访客 / 换卡对象视角（安全只读模式）
 
@@ -58,24 +59,20 @@
      SELECT id FROM auth.users WHERE email = '你的管理员邮箱@example.com';
      ```
 4. **复制两把数据库连接钥匙：**
-   * **获取** `Project URL`**：** 点击左下角 **Project Settings（齿轮图标）-> Data API**（或 **General**），复制顶部的项目网址（格式严格为 `https://supabase.co`，**注意末尾不要包含** `/rest/v1` **后缀**）。
-   * **获取** `anon public` **key：** 点击左侧 **Project Settings -> API Keys**，点击页面右上方的 `View legacy API keys` 按钮（**不要复制主页默认的** `sb_publishable_` **密钥**），复制 `anon` ****`public` 一栏中以 `eyJ` 开头的长密钥。
-
+   * **获取 `Project URL`：** 点击左下角 **Project Settings（齿轮图标）-> Data API**（或 **General**），复制顶部的项目网址（格式严格为 `https://[系统生成].supabase.co`，**注意末尾不要包含 `/rest/v1` 后缀**）。
+   * **获取 `anon public` key：** 点击左侧 **Project Settings -> API Keys**，点击页面右上方的 **`View legacy API keys`** 按钮（**不要复制主页默认的 `sb_publishable_` 密钥**），复制 **`anon` `public`** 一栏中以 **`eyJ`** 开头的长密钥。
+ 
 ### 第 3 步：一键部署上线到 Vercel
 
 1. **关联 GitHub 仓库：** 使用 GitHub 账号登录 [Vercel](https://vercel.com)，点击 **Add New... -> Project**（若首次使用，点击页面中的 **Install** 授权 Vercel 读取你的 GitHub 仓库），找到你刚才 Fork 的仓库并点击 **Import**。
-2. **填写环境变量（推荐直接上传** `.env` **文件，最防呆）：**
-   * 展开 **Environment Variables** 栏。
-   * **方式 A（最简单，推荐）：** 在电脑桌面新建一个纯文本文件命名为 `.env`（或直接使用本地已有的 `.env`），按以下两行格式填入第 2 步复制的密钥并保存（等号两边不留空格、不加引号）：
-     ```env
-     VITE_SUPABASE_URL=https://supabase.co
-     VITE_SUPABASE_ANON_KEY=eyJ开头的长密钥
-     ```
-
-     然后在 Vercel 页面点击 `Import .env` 按钮选中该文件上传，系统会自动完美拆分识别，绝不会填反。
-   * **方式 B（手动填写，注意不要填反** `Key` **和** `Value`**）：**
-     * **第 1 组：** `Key` 框填 `VITE_SUPABASE_URL`，`Value` 框填 `https://supabase.co`（不含 `/rest/v1`），点击 `+ Add More`。
-     * **第 2 组：** `Key` 框填 `VITE_SUPABASE_ANON_KEY`，`Value` 框填 `eyJ` 开头的长密钥。
+2. **填写环境变量（注意不要填反 `Key` 和 `Value`）：**
+   * 展开 **Environment Variables** 栏，手动添加以下两组配置（每填完一组点击 **`+ Add More`**）：
+   * **第 1 组：**
+     * `Key` 框填：`VITE_SUPABASE_URL`
+     * `Value` 框填：第 2.4 步复制的 `https://[系统生成].supabase.co`（不含 `/rest/v1`）
+   * **第 2 组：**
+     * `Key` 框填：`VITE_SUPABASE_ANON_KEY`
+     * `Value` 框填：第 2.4 步复制的 `eyJ` 开头的长密钥
 3. **完成部署：** 点击 **Create Project**（在随后的页面中**忽略** `Optional Integrations` 里的 Supabase 插件，**不要点击** `Add`），直接点击 **Deploy**，等待约 30 秒～1 分钟即可部署完成。
 4. **绑定自定义域名（可选）：** 部署成功后，可在项目面板点击 **Add Domain** 绑定你自己的个人域名；若无需自定义域名，直接使用 Vercel 免费赠送的 `*.vercel.app` 链接即可（国内访问如遇偶发限制，也可同步关联至 [Cloudflare Pages](https://cloudflare.com) 获取免备案 `*.pages.dev` 备用线路）。
 5. **首次登录与改密：** 点击 **Visit** 打开网站，选择「管理员登入」，输入第 2 步创建的邮箱和密码即可开始录入小卡（初始默认访客口令为 `plave2026`，登录后请第一时间点击顶部「口令」按钮修改为你自己的专属暗号）。
