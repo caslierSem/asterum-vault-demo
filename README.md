@@ -7,55 +7,81 @@
 ## 一、 核心功能亮点
 
 ### 1. 管理员视角（全功能库存与交易管理）
+
 * **多种便捷录入方式：** 支持单张卡片精细录入、多选图片批量录入、以及长截图智能识别裁切导入，上传前自动压缩图片省流量。
 * **多维完备度自动追踪：** 设置每张卡的「目标持有数量」后，系统自动结合现货与在途订单计算状态：
   * **缺 X（红标）：** 尚未凑齐目标数量。
-  * **已凑齐*（绿标带星号）：** 账面总数已达标，但仍有约换中的交易未最终落地。
+  * *已凑齐（绿标带星号）：** 账面总数已达标，但仍有约换中的交易未最终落地。
   * **已凑齐（绿标）：** 现货已彻底落袋集齐。
   * **多 X（蓝标）：** 超出目标数量，可直接用于换出或出售。
 * **斜杠层级主题管理：** 支持用斜杠创建多级分类（例如 `专辑/出道专`、`特典/Ktown4u`），支持自定义排序权重与单卡最多 3 个标签关联。
 * **原子化换卡订单流转：** 创建「约换中」订单时自动锁定对应卡片的可用库存，防止超卖/超换；交易完成后一键扣除流出库存、增加流入库存；取消订单自动释放锁定数量，且表单草稿自动本地防丢。
 * **一键生成高清换卡海报：** 自动提取「多出（HAVE）」与「缺少（WANT）」卡片生成双栏换卡图，内置**北京东八区（UTC+8）精确生成时间戳**、支持手动调整主题排序与勾选剔除单卡，提供高清 JPEG 下载及纯净截图模式。
-* **访客口令与专属免密链接：** 支持在线随时修改或关闭访客口令，一键复制带暗号的专属分享链接（如 `https://你的域名/?code=暗号`），买家点开链接即可免输密码直接浏览，且地址栏自动抹除暗号防截图扩散。初始访客口令默认为`plave2026`。
+* **访客口令与专属免密链接：** 支持在线随时修改或关闭访客口令，一键复制带暗号的专属分享链接（如 `https://你的域名/?code=暗号`），买家点开链接即可免输密码直接浏览，且地址栏自动抹除暗号防截图扩散。初始访客口令默认为 `plave2026`。
 
 ### 2. 访客 / 换卡对象视角（安全只读模式）
+
 * **零门槛浏览：** 拿到专属分享链接直接点开即可进入只读清单（若仅拿到主域名，输入管理员提供的访客口令即可进入）。
 * **实时筛选与导出：** 可按名称、`#主题`、收藏状态及「多余/缺卡」条件快速筛选，并支持自行导出换卡参考图。
 * **严格隐私隔离：** 访客模式下自动隐藏管理员的私密备注、收纳位置及历史交易对象信息，且无任何修改权限。
 
 ---
 
-## 二、 零成本个人免费部署指南（适合想自己搭建的同担）
+## 二、 零成本个人免费部署指南（零代码基础保姆级教程）
 
-本项目采用纯前端静态架构（Vite + React + Tailwind CSS）搭配免费云数据库（Supabase）与免费网页托管（Vercel），**个人使用全程 0 费用**。
+本项目采用纯前端静态架构（Vite + React + Tailwind CSS）搭配免费云数据库（Supabase）与免费网页托管（Vercel），**全程无需下载编程软件、无需购买服务器或域名、无需 ICP 备案，个人使用 0 费用**。
 
 ### 第 1 步：准备代码仓库
-1. 注册并登录 [GitHub](https://github.com)。
-2. 点击本仓库右上角的 **Fork**，将代码复制到你自己的 GitHub 账号下。
+
+1. 打开 [GitHub](https://github.com) 注册并登录账号。
+2. 回到本仓库页面，点击右上角的 **Fork** 按钮（默认设置直接点 **Create fork**），将代码复制到你自己的 GitHub 账号下。
 
 ### 第 2 步：免费创建 Supabase 数据库并一键建表
-1. 前往 [Supabase](https://supabase.com) 注册账号并新建一个免费项目（Region 建议选择离你较近的 `Singapore` 或 `Tokyo`）。
-2. 进入项目后台左侧菜单的 **SQL Editor -> New Query**。
-3. 打开本仓库中的 **`supabase/full_schema.sql`** 文件，全选复制全部内容粘贴进去，点击右下角 **Run** 运行（看到 `Success` 即表示全部数据表、权限隔离策略与 `card-images` 图片存储桶已自动建好）。
-4. **设置你的管理员账号：**
-   * **配置登录安全开关：** 前往左侧 **Authentication -> Providers -> Email**，关闭以下两项并保存：
-     * 关闭 **`Allow new users to sign up`**：禁止陌生人自行注册账号，保障数据安全。
-     * 关闭 **`Confirm email`**：跳过邮箱激活验证，支持直接使用虚拟邮箱（如 `admin@plave.com`）作为管理员账号。
-   * **创建管理员用户：** 前往左侧 **Authentication -> Users -> Add user -> Create new user**，输入你的管理员邮箱和密码，勾选 **`Auto Confirm User`** 并创建。
-   * **授予管理员白名单权限：** 回到 **SQL Editor** 运行以下语句（将邮箱替换为你刚创建的邮箱）：
+
+1. 前往 [Supabase](https://supabase.com) 注册账号并点击 **New Project** 新建一个免费项目：
+   * **Name：** 任意填写英文项目名（如 `asterum-vault`）。
+   * **Database Password：** 自己设置并记牢数据库密码。
+   * **Region：** 建议选择离你较近的 `Singapore`（新加坡）或 `Tokyo`（东京）。
+   * **Data Access（关键）：** 保持默认**只勾选第一项** `Enable Data API`，下面两项安全选项**不要勾选**，点击 **Create new project** 等待约 1 分钟初始化完成。
+2. **一键自动建表：**
+   * 进入项目后台左侧菜单的 **SQL Editor -> New query**。
+   * 打开你刚才 Fork 的 GitHub 仓库里的 `supabase/full_schema.sql` 文件，全选复制全部代码粘贴进编辑框，点击右下角绿色 **Run** 运行。
+   * *(防呆提示)*：如果弹出黄色的风险提示框，不用慌张，直接点击黄色的 `Run without RLS` 即可；看到下方显示绿色的 `Success. No rows returned` 即表示全部数据表、权限隔离策略与 `card-images` 图片存储桶已自动建好。
+3. **设置你的管理员账号：**
+   * **关闭公开注册与邮箱验证：** 前往左侧 **Authentication -> Providers -> Email**，**取消勾选**以下两项并点击 **Save** 保存：
+     * 关闭 `Allow new users to sign up`：禁止陌生人自行注册账号，保障数据安全。
+     * 关闭 `Confirm email`：跳过邮件激活验证，支持直接用虚拟邮箱（如 `admin@plave.com`）当登录账号。
+   * **创建管理员用户：** 前往左侧 **Authentication -> Users -> Add user -> Create new user**，输入你的管理员邮箱和密码（邮箱不需要真实存在，建议全小写），**务必勾选** `Auto Confirm User` 并点击创建。
+   * **授予管理员白名单权限：** 回到左侧 **SQL Editor -> New query**，粘贴并运行以下语句（将单引号里的邮箱替换为你刚创建的邮箱）：
      ```sql
      INSERT INTO public.app_owners (user_id)
      SELECT id FROM auth.users WHERE email = '你的管理员邮箱@example.com';
      ```
-   * *(安全建议)* 在 **Authentication -> Providers -> Email** 中关闭 `Allow new users to sign up`，防止陌生人注册账号。
-5. **获取连接密钥（`Project URL` 与 `anon public` key）：**
-   * **获取 `Project URL`：** 点击左下角 **Project Settings（齿轮图标）-> Data API**（或 **General**），复制顶部的项目网址（格式严格为 `https://supabase.co`，**注意末尾不要包含 `/rest/v1` 后缀**）。
-   * **获取 `anon public` key：** 点击左侧 **Project Settings -> API Keys**，点击页面右上方的 **`View legacy API keys`**，复制 **`anon` `public`** 一栏中以 **`eyJ`** 开头的长密钥。
+4. **复制两把数据库连接钥匙：**
+   * **获取** `Project URL`**：** 点击左下角 **Project Settings（齿轮图标）-> Data API**（或 **General**），复制顶部的项目网址（格式严格为 `https://supabase.co`，**注意末尾不要包含** `/rest/v1` **后缀**）。
+   * **获取** `anon public` **key：** 点击左侧 **Project Settings -> API Keys**，点击页面右上方的 `View legacy API keys` 按钮（**不要复制主页默认的** `sb_publishable_` **密钥**），复制 `anon` ****`public` 一栏中以 `eyJ` 开头的长密钥。
 
 ### 第 3 步：一键部署上线到 Vercel
-1. 使用 GitHub 账号登录 [Vercel](https://vercel.com)，点击 **Add New... -> Project**，导入你刚才 Fork 的仓库。
-2. 在 **Environment Variables（环境变量）** 栏中添加以下两项（填入第 2 步复制的密钥）：
-   * `VITE_SUPABASE_URL` = 你的 Project URL
-   * `VITE_SUPABASE_ANON_KEY` = 你的 anon public key
-3. 点击 **Deploy** 等待约 1 分钟部署完成，即可获得你的专属网址！
-4. **首次登录：** 打开你的网站，选择「管理员登入」，输入第 2 步创建的邮箱和密码即可开始录入小卡（默认访客口令为 `plave2026`，登录后请第一时间点击顶部「口令」按钮修改为你自己的专属暗号）。
+
+1. **关联 GitHub 仓库：** 使用 GitHub 账号登录 [Vercel](https://vercel.com)，点击 **Add New... -> Project**（若首次使用，点击页面中的 **Install** 授权 Vercel 读取你的 GitHub 仓库），找到你刚才 Fork 的仓库并点击 **Import**。
+2. **填写环境变量（推荐直接上传** `.env` **文件，最防呆）：**
+   * 展开 **Environment Variables** 栏。
+   * **方式 A（最简单，推荐）：** 在电脑桌面新建一个纯文本文件命名为 `.env`（或直接使用本地已有的 `.env`），按以下两行格式填入第 2 步复制的密钥并保存（等号两边不留空格、不加引号）：
+     ```env
+     VITE_SUPABASE_URL=https://supabase.co
+     VITE_SUPABASE_ANON_KEY=eyJ开头的长密钥
+     ```
+
+     然后在 Vercel 页面点击 `Import .env` 按钮选中该文件上传，系统会自动完美拆分识别，绝不会填反。
+   * **方式 B（手动填写，注意不要填反** `Key` **和** `Value`**）：**
+     * **第 1 组：** `Key` 框填 `VITE_SUPABASE_URL`，`Value` 框填 `https://supabase.co`（不含 `/rest/v1`），点击 `+ Add More`。
+     * **第 2 组：** `Key` 框填 `VITE_SUPABASE_ANON_KEY`，`Value` 框填 `eyJ` 开头的长密钥。
+3. **完成部署：** 点击 **Create Project**（在随后的页面中**忽略** `Optional Integrations` 里的 Supabase 插件，**不要点击** `Add`），直接点击 **Deploy**，等待约 30 秒～1 分钟即可部署完成。
+4. **绑定自定义域名（可选）：** 部署成功后，可在项目面板点击 **Add Domain** 绑定你自己的个人域名；若无需自定义域名，直接使用 Vercel 免费赠送的 `*.vercel.app` 链接即可（国内访问如遇偶发限制，也可同步关联至 [Cloudflare Pages](https://cloudflare.com) 获取免备案 `*.pages.dev` 备用线路）。
+5. **首次登录与改密：** 点击 **Visit** 打开网站，选择「管理员登入」，输入第 2 步创建的邮箱和密码即可开始录入小卡（初始默认访客口令为 `plave2026`，登录后请第一时间点击顶部「口令」按钮修改为你自己的专属暗号）。
+
+---
+
+## 三、 日常维护小贴士
+
+* **防休眠提醒：** Supabase 免费版数据库如果连续 **7 天**没有任何访问记录，会自动进入休眠（Paused）状态（数据不会丢失）。只需每周至少打开一次网站浏览，或在 Supabase 后台点击 `Restore` 即可恢复活跃。
