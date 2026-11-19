@@ -1,0 +1,11 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html,
+body {
+  touch-action: manipulation;
+  /* 强制在页面加载前显示这个底色，与你 App 的主背景色一致 */
+  background-color: #f8fafc !important; 
+  color: #0f172a;
+}

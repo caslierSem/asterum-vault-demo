@@ -1,0 +1,19 @@
+{
+  "name": "Asterum Vault",
+  "short_name": "Vault",
+  "description": "PLAVE藏宝阁",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f8fafc",
+  "theme_color": "#0f766e",
+  "icons": [
+    {
+      "src": "/mobile-icon.png",
+      "sizes": "any",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
