@@ -37,8 +37,8 @@ const STAGE2_MIN_CARD_WIDTH_RATIO = 0.05;
 /** 第二阶段单卡相对当前分组容器的最小宽度占比 */
 const STAGE2_MIN_ROI_WIDTH_RATIO = 0.16;
 
-/** 单卡相对整图最大宽度占比上限（物理拦截多卡粘连成的巨型整列/整块框） */
-const MAX_CARD_WIDTH_RATIO = 0.32;
+/** 单卡相对整图最大宽度占比上限（兼容手机竖屏 1~2 列截屏，同时拦截整行/整屏巨型粘连框） */
+const MAX_CARD_WIDTH_RATIO = 0.62;
 
 const MIN_CARD_ASPECT = 0.8;
 const MAX_CARD_ASPECT = 2.2;
