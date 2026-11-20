@@ -17,14 +17,19 @@ export interface ImportDraft {
 
 interface ImportReviewProps {
   initialDrafts: ImportDraft[];
+  autoOpenBatchDefaults?: boolean;
   onComplete: (savedCount: number) => void;
 }
 
-export default function ImportReview({ initialDrafts, onComplete }: ImportReviewProps) {
+export default function ImportReview({
+  initialDrafts,
+  autoOpenBatchDefaults = true,
+  onComplete,
+}: ImportReviewProps) {
   const [drafts, setDrafts] = useState<ImportDraft[]>(initialDrafts);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [batchOpen, setBatchOpen] = useState(true);
+  const [batchOpen, setBatchOpen] = useState(autoOpenBatchDefaults);
   const { tags, error: tagsError } = useTags();
 
   const updateDraft = (id: string, changes: Partial<Omit<ImportDraft, 'id' | 'image' | 'previewUrl'>>) => {

@@ -56,10 +56,14 @@ function formatBeijingTimestamp(date: Date = new Date()): string {
 
 /**
  * 海报中的单张物品展示卡片组件
+ * data-export-card-id={isExport ? item.card.id : undefined}，方便导出瞬间精准测量每张卡在画布上的位置
  */
 const CardBlock = ({ item, showPrice, isScreenshotMode, isExcluded, onToggle, isExport }: CardBlockProps) => (
   <div className={`w-full max-w-[160px] mx-auto group relative flex flex-col gap-1.5 transition-opacity ${isExcluded ? 'opacity-20 grayscale' : 'opacity-100'}`}>
-    <div className="relative w-full h-[213px] overflow-hidden rounded-lg bg-white border border-slate-200 shadow-sm">
+    <div
+      data-export-card-id={isExport ? item.card.id : undefined}
+      className="relative w-full h-[213px] overflow-hidden rounded-lg bg-white border border-slate-200 shadow-sm"
+    >
       {item.card.image_path ? (
         <img src={getCardImageUrl(item.card.image_path)} className="h-full w-full object-cover object-top" crossOrigin="anonymous" />
       ) : (

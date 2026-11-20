@@ -3,16 +3,19 @@ import { AlertCircle, CheckCircle2, ImagePlus, Loader2 } from 'lucide-react';
 import ImportReview, { type ImportDraft } from '@/components/ImportReview';
 import { cropToCanvas, canvasToBlob, detectCardRegions, loadImageFromFile } from '@/lib/cardDetection';
 import { DEFAULT_FIELD_VALUES } from '@/lib/cardFields';
+import { extractMetadataFromImageFile } from '@/lib/posterMetadata';
+import { useTags } from '@/lib/useTags';
 
 type Stage = 'idle' | 'processing' | 'review';
 
 export default function ScreenshotImport() {
   const [stage, setStage] = useState<Stage>('idle');
   const [drafts, setDrafts] = useState<ImportDraft[]>([]);
+  const [isMetadataRestored, setIsMetadataRestored] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
-  const [isDragging, setIsDragging] = useState(false); // 新增：拖拽高亮状态
+  const [isDragging, setIsDragging] = useState(false);
+  const { tags } = useTags();
 
-  // 核心处理逻辑（和原来完全一样）
   const processFile = async (file: File) => {
     if (!file.type.startsWith('image/')) {
       setMessage({ type: 'error', text: '请选择图片文件。' });
@@ -23,21 +26,58 @@ export default function ScreenshotImport() {
     setMessage(null);
     try {
       const image = await loadImageFromFile(file);
-      const regions = detectCardRegions(image);
-      if (regions.length === 0) {
-        throw new Error('没有识别到物品，请换一张更清晰、排列整齐的图片。');
-      }
+      const embedded = await extractMetadataFromImageFile(file);
 
       const newDrafts: ImportDraft[] = [];
-      for (let i = 0; i < regions.length; i++) {
-        const blob = await canvasToBlob(cropToCanvas(image, regions[i]));
-        newDrafts.push({
-          id: crypto.randomUUID(),
-          image: blob,
-          previewUrl: URL.createObjectURL(blob),
-          values: { ...DEFAULT_FIELD_VALUES },
-          tagIds: [],
-        });
+
+      if (embedded && embedded.cards.length > 0) {
+        // 优先走本应用导出海报原图的无损元数据还原通道
+        const tagByName = new Map(tags.map((t) => [t.name.trim(), t.id]));
+
+        for (const item of embedded.cards) {
+          const safeRect = {
+            x: Math.max(0, Math.min(image.naturalWidth - 1, item.rect.x)),
+            y: Math.max(0, Math.min(image.naturalHeight - 1, item.rect.y)),
+            width: Math.max(1, Math.min(image.naturalWidth - item.rect.x, item.rect.width)),
+            height: Math.max(1, Math.min(image.naturalHeight - item.rect.y, item.rect.height)),
+          };
+          const blob = await canvasToBlob(cropToCanvas(image, safeRect));
+          const matchedTagIds = item.themes
+            .map((name) => tagByName.get(name.trim()))
+            .filter((id): id is string => Boolean(id));
+
+          newDrafts.push({
+            id: crypto.randomUUID(),
+            image: blob,
+            previewUrl: URL.createObjectURL(blob),
+            values: {
+              ...DEFAULT_FIELD_VALUES,
+              name: item.name || '',
+              is_special: Boolean(item.is_special),
+              is_defective: Boolean(item.is_defective),
+            },
+            tagIds: matchedTagIds,
+          });
+        }
+        setIsMetadataRestored(true);
+      } else {
+        // 常规截图/微信压缩图/weareplave 表格，无缝降级走图像识别算法
+        const regions = detectCardRegions(image);
+        if (regions.length === 0) {
+          throw new Error('没有识别到物品，请换一张更清晰、排列整齐的图片。');
+        }
+
+        for (let i = 0; i < regions.length; i++) {
+          const blob = await canvasToBlob(cropToCanvas(image, regions[i]));
+          newDrafts.push({
+            id: crypto.randomUUID(),
+            image: blob,
+            previewUrl: URL.createObjectURL(blob),
+            values: { ...DEFAULT_FIELD_VALUES },
+            tagIds: [],
+          });
+        }
+        setIsMetadataRestored(false);
       }
 
       setDrafts(newDrafts);
@@ -49,14 +89,12 @@ export default function ScreenshotImport() {
     }
   };
 
-  // Input 选择文件
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     event.target.value = '';
     if (file) void processFile(file);
   };
 
-  // === 新增：拖拽处理逻辑 ===
   const handleDragOver = (e: DragEvent<HTMLLabelElement>) => {
     e.preventDefault();
     setIsDragging(true);
@@ -76,12 +114,19 @@ export default function ScreenshotImport() {
 
   const handleComplete = (savedCount: number) => {
     setDrafts([]);
+    setIsMetadataRestored(false);
     setStage('idle');
     setMessage({ type: 'success', text: `已保存 ${savedCount} 件物品到库存。` });
   };
 
   if (stage === 'review') {
-    return <ImportReview initialDrafts={drafts} onComplete={handleComplete} />;
+    return (
+      <ImportReview
+        initialDrafts={drafts}
+        autoOpenBatchDefaults={!isMetadataRestored}
+        onComplete={handleComplete}
+      />
+    );
   }
 
   return (
@@ -89,7 +134,7 @@ export default function ScreenshotImport() {
       <div className="mb-6">
         <h1 className="text-2xl font-semibold text-slate-900">截图自动录入</h1>
         <p className="mt-1 text-sm text-slate-500">
-          上传物品表格截图，系统会自动切出每件物品，之后你只需补充名称、数量等信息。
+          上传物品表格截图或本助手导出的换卡海报，系统会自动切出每件物品并尽量还原信息。
         </p>
       </div>
 
@@ -97,19 +142,16 @@ export default function ScreenshotImport() {
         {stage === 'processing' ? (
           <div className="flex flex-col items-center gap-3 py-16 text-slate-500">
             <Loader2 className="h-6 w-6 animate-spin text-teal-700" />
-            <p className="text-sm">
-              正在切分卡面…
-            </p>
+            <p className="text-sm">正在解析并切分卡面…</p>
           </div>
         ) : (
-          <label 
-            // === 新增：拖拽事件绑定 & 样式联动 ===
+          <label
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
             className={`flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed px-6 py-14 text-slate-500 transition ${
-              isDragging 
-                ? 'border-teal-600 bg-teal-50/80 scale-[0.99]' 
+              isDragging
+                ? 'border-teal-600 bg-teal-50/80 scale-[0.99]'
                 : 'border-slate-300 bg-slate-50 hover:border-teal-600 hover:bg-teal-50/40'
             }`}
           >
