@@ -3,10 +3,10 @@
 专为 K-POP / PLAVE 周边、专辑小卡、特典卡收藏打造的个人库存与换卡流转管理工具。支持电脑端与手机端浏览器自适应访问，兼顾私密记账与对外换卡展示。
 
 > ### 🌟 在线公开 Demo 体验站（欢迎自由试用）
-> * **在线体验地址：**
->   * **主线路（国内免代理直连）：** [https://pages.dev](https://pages.dev)
->   * **备用线路（海外访问推荐）：** [https://vercel.app](https://vercel.app)
-> * **访客视角免密直达链接：** [https://pages.dev?code=plavedemo](https://pages.dev?code=plavedemo)（若口令未被修改，点击即可直接进入访客页面；手动输入初始访客口令 **`plavedemo`** 亦可进入）
+ * **在线体验地址：**
+>   * **主线路（国内免代理直连）：** [https://asterum-vault-demo.pages.dev/](https://asterum-vault-demo.pages.dev/)
+>   * **备用线路（海外访问推荐）：** [https://asterum-vault-demo.vercel.app/](https://asterum-vault-demo.vercel.app/)
+> * **访客视角免密直达链接：** [https://asterum-vault-demo.pages.dev/?code=plavedemo](https://asterum-vault-demo.pages.dev/?code=plavedemo)（若口令未被修改，点击即可直接进入访客页面；手动输入初始访客口令 **`plavedemo`** 亦可进入）
 > * **管理员视角体验账号：**
 >   * **登录邮箱：** `asterumvault@plave.com`
 >   * **登录密码：** `0312Plave.0619`

@@ -37,8 +37,10 @@ const STAGE2_MIN_CARD_WIDTH_RATIO = 0.05;
 /** 第二阶段单卡相对当前分组容器的最小宽度占比 */
 const STAGE2_MIN_ROI_WIDTH_RATIO = 0.16;
 
-/** 单卡相对整图最大宽度占比上限（兼容手机竖屏 1~2 列截屏，同时拦截整行/整屏巨型粘连框） */
-const MAX_CARD_WIDTH_RATIO = 0.62;
+/** 常规电脑/全图海报的单卡最大宽度占比上限（拦截双列海报里的 2×3 粘连大框） */
+const MAX_CARD_WIDTH_RATIO_WIDE = 0.32;
+/** 窄幅手机竖屏截屏的单卡最大宽度占比上限（允许一排 1~2 张卡） */
+const MAX_CARD_WIDTH_RATIO_NARROW = 0.62;
 
 const MIN_CARD_ASPECT = 0.8;
 const MAX_CARD_ASPECT = 2.2;
@@ -607,9 +609,11 @@ function countCellsInBox(
  * @param imageWidth 当前分析画布的总宽度（用于计算单卡最大宽度上限）
  */
 function isCardCandidate(box: CandidateBox, minWidthPx: number, imageWidth: number): boolean {
+  // 手机竖屏局部截屏缩放后宽度通常 ≤ 900px，放宽上限至 62%；电脑/双列超长海报（宽 > 900px）严格限制在 32% 以内，杜绝 2×3 粘连大框
+  const maxRatio = imageWidth <= 900 ? MAX_CARD_WIDTH_RATIO_NARROW : MAX_CARD_WIDTH_RATIO_WIDE;
   return (
     box.width >= minWidthPx &&
-    box.width <= imageWidth * MAX_CARD_WIDTH_RATIO &&
+    box.width <= imageWidth * maxRatio &&
     box.height / box.width >= MIN_CARD_ASPECT &&
     box.height / box.width <= MAX_CARD_ASPECT &&
     box.fill >= MIN_CARD_FILL

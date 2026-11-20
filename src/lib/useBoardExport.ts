@@ -1,10 +1,11 @@
 import { useState, useRef } from 'react';
 import { toJpeg } from 'html-to-image';
-import { getCardImageUrl, type Card } from '@/lib/cards';
+import { getCardImageUrl, stripCardLabelPrefixes, type Card } from '@/lib/cards';
+import { embedMetadataIntoJpeg, type EmbeddedCardMeta } from '@/lib/posterMetadata';
 
 /**
  * 换卡海报图片预加载与高清 JPEG 导出 Hook
- * 封装了远程图片跨域预加载进度追踪、离屏宽屏容器重绘等待以及 html-to-image 生成下载全流程
+ * 封装了远程图片跨域预加载进度追踪、离屏宽屏容器重绘等待、以及卡片隐形元数据写入全流程
  */
 export function useBoardExport() {
   const [isExporting, setIsExporting] = useState(false);
@@ -44,6 +45,48 @@ export function useBoardExport() {
   };
 
   /**
+   * 测量离屏导出容器内每张卡面的精确像素坐标，并与卡片名称、主题、特典/瑕卡属性绑定
+   */
+  const collectEmbeddedCards = (
+    container: HTMLElement,
+    visibleCards: Card[],
+  ): EmbeddedCardMeta[] => {
+    const cardMap = new Map<string, Card>();
+    for (const card of visibleCards) {
+      cardMap.set(card.id, card);
+    }
+
+    const rootRect = container.getBoundingClientRect();
+    const nodes = container.querySelectorAll<HTMLElement>('[data-export-card-id]');
+    const embedded: EmbeddedCardMeta[] = [];
+
+    nodes.forEach((el) => {
+      const cardId = el.dataset.exportCardId;
+      if (!cardId) return;
+      const card = cardMap.get(cardId);
+      if (!card) return;
+
+      const box = el.getBoundingClientRect();
+      if (box.width <= 0 || box.height <= 0) return;
+
+      embedded.push({
+        rect: {
+          x: Math.round(box.left - rootRect.left),
+          y: Math.round(box.top - rootRect.top),
+          width: Math.round(box.width),
+          height: Math.round(box.height),
+        },
+        name: stripCardLabelPrefixes(card.name),
+        themes: card.tags.map((t) => t.name),
+        is_special: card.is_special,
+        is_defective: card.is_defective,
+      });
+    });
+
+    return embedded;
+  };
+
+  /**
    * 触发海报导出流程
    * @param visibleCards 当前勾选保留、需要印在海报上的所有卡片列表
    * @param filename 导出下载的文件名（默认：PLAVE交换清单.jpg）
@@ -64,23 +107,40 @@ export function useBoardExport() {
       setExportStatus('正在生成高清海报…');
       // 预留 1000ms 缓冲，确保离屏 1400px 宽屏容器中的图片与字体已完成排版重绘
       setTimeout(async () => {
+        let downloadUrl: string | null = null;
         try {
           if (!exportRef.current) return;
+          const embeddedCards = collectEmbeddedCards(exportRef.current, visibleCards);
+
           const dataUrl = await toJpeg(exportRef.current, {
             quality: 0.85,
             pixelRatio: 1,
             backgroundColor: '#ffffff',
             cacheBust: true,
           });
+          const rawBlob = await (await fetch(dataUrl)).blob();
 
+          // 将卡片坐标与元数据隐形写入 JPEG 注释段
+          const finalBlob =
+            embeddedCards.length > 0
+              ? await embedMetadataIntoJpeg(rawBlob, { version: 1, cards: embeddedCards })
+              : rawBlob;
+
+          if (!rawBlob) throw new Error('生成图片 Blob 失败');
+
+          downloadUrl = URL.createObjectURL(finalBlob);
           const link = document.createElement('a');
           link.download = filename;
-          link.href = dataUrl;
+          link.href = downloadUrl;
           link.click();
         } catch (err) {
           console.error('海报生成失败:', err);
           alert('生成图片失败，请重试或使用纯净截图模式');
         } finally {
+          if (downloadUrl) {
+            const urlToRevoke = downloadUrl;
+            setTimeout(() => URL.revokeObjectURL(urlToRevoke), 5000);
+          }
           setIsExporting(false);
           setExportStatus('');
         }
