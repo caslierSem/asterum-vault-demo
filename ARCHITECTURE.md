@@ -37,11 +37,12 @@ src/
 │   ├── useInventory.ts         # 核心库存 Hook：并行拉取卡片 + 活跃订单，computeCardStocks 计算可用/在途/待入库
 │   ├── useTags.ts              # 主题列表 Hook（供筛选器等轻量场景）
 │   ├── useOrderDraft.ts        # 订单表单草稿 Hook：localStorage 键 plave_order_draft 的读写、失效物品校验与提示
-│   ├── useBoardExport.ts       # 换卡海报导出 Hook：远程图片跨域预加载 → 离屏 1400px 容器 → html-to-image 生成 JPEG
+│   ├── useBoardExport.ts       # 换卡海报导出 Hook：图片跨域预加载 → 离屏 1400px 容器 → toJpeg 生成并写入隐形元数据
+│   ├── posterMetadata.ts       # 换卡海报 JPEG 注释段（COM 0xFFFE）隐形元数据二进制写入与解析，支持原图导入秒级无损还原
 │   ├── cardFields.ts           # 表单字段类型（CardFieldValues）、解析与校验（parseFieldValues）
 │   ├── cardFilters.ts          # 列表筛选器纯函数：名称搜索、主题、收藏状态、属性（特典/瑕疵）、库存状态
 │   ├── cardStatus.ts           # 完备度状态机：short/complete/surplus 徽标文案与配色，含“已凑齐 + 在途”的 * 号规则
-│   ├── cardDetection.ts        # 截图录入的卡片识别辅助
+│   ├── cardDetection.ts        # 截图录入识别引擎：两阶段背景检测、动态分辨率下限、标签剥离与一维投影谷底切分
 │   ├── imageCompression.ts     # 上传前图片压缩（Canvas 重绘为 JPEG）
 │   └── formStyles.ts           # 全站复用的输入框/按钮/下拉样式类常量
 └── components/
@@ -61,8 +62,8 @@ src/
     ├── TagManager.tsx          # 主题管理页：层级树、兄弟排序、增删改
     ├── TagPicker.tsx           # 主题多选（含上限 3 的提示）
     ├── TagFilterInput.tsx      # 按主题筛选的输入区
-    ├── ScreenshotImport.tsx    # 截图上传入口
-    ├── ImportReview.tsx        # 截图识别结果复核
+│   ├── ScreenshotImport.tsx    # 截图与海报上传入口：优先解析海报原图元数据无损还原，缺失时降级走图像识别切图
+│   ├── ImportReview.tsx        # 截图识别结果复核（支持根据是否已还原元数据智能控制批量默认值弹窗）
     ├── OrdersPage.tsx          # 订单页：搜索、状态筛选、订单列表
     ├── OrderForm.tsx           # 新建订单表单
     ├── OrderLineSection.tsx    # 订单行区块（流出/流入两组），导出 DraftLineState 类型
@@ -411,5 +412,5 @@ openOrders               = 涉及该卡的约换中订单行数
 
 ---
 
-*文档基于 2026-11-18 的代码库与 supabase/full_schema.sql 编写；若后续新增迁移，
+*文档基于 2026-11-20 的代码库与 supabase/full_schema.sql 编写；若后续新增迁移，
 请以迁移文件与 full_schema.sql 的更新为准。*
