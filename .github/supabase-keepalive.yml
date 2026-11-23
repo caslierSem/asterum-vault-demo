@@ -1,0 +1,35 @@
+name: Supabase 定时防休眠保活
+
+on:
+  schedule:
+    # 每隔 5 天的北京时间早上 10:00（UTC 02:00）自动执行一次查询，防止 Supabase 免费版 7 天无访问休眠
+    - cron: '0 2 */5 * *'
+  # 允许在 GitHub Actions 页面手动点击按钮立即测试
+  workflow_dispatch:
+
+jobs:
+  ping-supabase:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 发送轻量级查询请求唤醒数据库
+        run: |
+          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_ANON_KEY" ]; then
+            echo "未配置 SUPABASE_URL 或 SUPABASE_ANON_KEY，跳过保活检查。"
+            exit 0
+          fi
+
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            "${SUPABASE_URL}/rest/v1/site_settings?select=id&limit=1" \
+            -H "apikey: ${SUPABASE_ANON_KEY}" \
+            -H "Authorization: Bearer ${SUPABASE_ANON_KEY}")
+
+          echo "Supabase 响应状态码: $HTTP_STATUS"
+          if [ "$HTTP_STATUS" -ge 200 ] && [ "$HTTP_STATUS" -lt 300 ]; then
+            echo "✅ 数据库保活成功！"
+          else
+            echo "❌ 保活请求异常，请检查密钥或项目状态。"
+            exit 1
+          fi
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
