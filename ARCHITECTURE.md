@@ -217,7 +217,7 @@ authenticated 角色则为 `GRANT ALL`（写权限仍受 RLS 的 `is_app_owner()
 - 桶配置：`file_size_limit` 20MB，`allowed_mime_types` 限定
   jpeg/png/webp/gif/heic/heif——服务端兜底，前端压缩仅为体验优化。
 
-### 2.6 业务 RPC 函数（一律 SET search_path，SECURITY INVOKER）
+### 2.6 业务 RPC 函数（一律固定 search_path；口令相关 3 个函数为 SECURITY DEFINER，其余为 SECURITY INVOKER）
 
 | 函数 | 作用 | 执行权限 |
 |---|---|---|
@@ -229,6 +229,8 @@ authenticated 角色则为 `GRANT ALL`（写权限仍受 RLS 的 `is_app_owner()
 | `has_valid_guest_passcode()` | RLS 谓词：校验请求头中的口令 | anon, authenticated |
 | `verify_guest_passcode(input_code)` | 登录页口令校验 | anon, authenticated |
 | `update_guest_passcode(new_code)` | 管理员改口令（内部显式调 `is_app_owner()` 拒绝越权） | authenticated |
+
+注：第三部分另包含 1 个触发器函数 enforce_max_tags_per_card()，共 9 个函数
 
 ---
 

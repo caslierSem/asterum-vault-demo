@@ -253,6 +253,10 @@ GRANT EXECUTE ON FUNCTION public.create_order(text, text, jsonb) TO authenticate
 GRANT EXECUTE ON FUNCTION public.complete_order(uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.cancel_order(uuid) TO authenticated;
 
+-- ----------------------------------------------------------------------------
+-- 第四部分：创建触发器函数 enforce_max_tags_per_card()
+-- ----------------------------------------------------------------------------
+
 CREATE TRIGGER card_tags_max_three
   BEFORE INSERT ON public.card_tags
   FOR EACH ROW EXECUTE FUNCTION public.enforce_max_tags_per_card();

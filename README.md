@@ -3,7 +3,7 @@
 专为 K-POP / PLAVE 周边、专辑小卡、特典卡收藏打造的个人库存与换卡流转管理工具。支持电脑端与手机端浏览器自适应访问，兼顾私密记账与对外换卡展示。
 
 > ### 🌟 在线公开 Demo 体验站（欢迎自由试用）
- * **在线体验地址：**
+> * **在线体验地址：**
 >   * **主线路（国内免代理直连）：** [https://asterum-vault-demo.pages.dev/](https://asterum-vault-demo.pages.dev/)
 >   * **备用线路（海外访问推荐）：** [https://asterum-vault-demo.vercel.app/](https://asterum-vault-demo.vercel.app/)
 > * **访客视角免密直达链接：** [https://asterum-vault-demo.pages.dev/?code=plavedemo](https://asterum-vault-demo.pages.dev/?code=plavedemo)（若口令未被修改，点击即可直接进入访客页面；手动输入初始访客口令 **`plavedemo`** 亦可进入）
@@ -119,8 +119,8 @@ Supabase 免费版在连续 **7 天**没有任何数据库请求时会自动进�
 1. **添加仓库密钥：** 打开你自己 Fork 的 GitHub 仓库页面，点击顶部 **`Settings`（设置）** -> 左侧菜单最底部的 **`Secrets and variables`** -> **`Actions`**。
 2. **填入两组参数：** 点击绿色的 **`New repository secret`**，依次新增以下两个密钥（值与第 2.4 步复制的完全相同）：
    * **第 1 个：** `Name` 填 `SUPABASE_URL`，`Secret` 填你的 Supabase 项目地址（不带末尾斜杠）。
-   * **第 2 个：** `Name` 填 `SUPABASE_ANON_KEY`，`Secet` 填你的 `eyJ` 开头的 `anon` public key。
-3. **手动测试唤醒：** 配置完成后，点开仓库顶部的 **`Actionsr`** 标签页，左侧选中 **`Supabase 定时防休眠保活`** 并点击右侧 **`Run workflow`** 手动运行一次，看到出现绿色对勾即代表全自动保活已正式生效。
+   * **第 2 个：** `Name` 填 `SUPABASE_ANON_KEY`，`Secret` 填你的 `eyJ` 开头的 `anon` public key。
+3. **手动测试唤醒：** 配置完成后，点开仓库顶部的 **`Actions`** 标签页，左侧选中 **`Supabase 定时防休眠保活`** 并点击右侧 **`Run workflow`** 手动运行一次，看到出现绿色对勾即代表全自动保活已正式生效。
 
 ---
 
