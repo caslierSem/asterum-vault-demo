@@ -1,5 +1,5 @@
-import { useState, useMemo } from 'react';
-import { ArrowLeft, Eye, EyeOff, CheckSquare, Square, ChevronUp, ChevronDown, Download, Loader2 } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { ArrowLeft, Eye, EyeOff, CheckSquare, Square, ChevronUp, ChevronDown, Download, Loader2, Pencil, Stamp, Check } from 'lucide-react';
 import {
   type Card,
   getCardImageUrl,
@@ -11,6 +11,17 @@ import {
 import { buildTagRank, type TagRecord } from '@/lib/tags';
 import { type CardStock } from '@/lib/useInventory';
 import { useBoardExport } from '@/lib/useBoardExport';
+import {
+  hasWatermarkText,
+  loadBoardTitle,
+  loadWatermarkConfig,
+  saveBoardTitle,
+  saveWatermarkConfig,
+  type WatermarkConfig,
+} from '@/lib/watermark';
+import WatermarkOverlay from '@/components/WatermarkOverlay';
+import WatermarkSettingsDialog from '@/components/WatermarkSettingsDialog';
+import { inputClass } from '@/lib/formStyles';
 
 interface SwapBoardViewProps {
   cards: Card[];
@@ -110,6 +121,13 @@ export default function SwapBoardView({ cards, stocks, tags, onClose }: SwapBoar
 
   const [customHaveOrder, setCustomHaveOrder] = useState<string[]>([]);
   const [customWantOrder, setCustomWantOrder] = useState<string[]>([]);
+  const [boardTitle, setBoardTitle] = useState(loadBoardTitle);
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [titleDraft, setTitleDraft] = useState(boardTitle);
+  const [watermark, setWatermark] = useState<WatermarkConfig>(loadWatermarkConfig);
+  const [isWatermarkDialogOpen, setIsWatermarkDialogOpen] = useState(false);
+  const titleInputRef = useRef<HTMLInputElement>(null);
+  const skipTitleBlurRef = useRef(false);
 
   const toggleExclude = (id: string) => {
     setExcludedCards((prev) => {
@@ -186,7 +204,32 @@ export default function SwapBoardView({ cards, stocks, tags, onClose }: SwapBoar
       .filter((item) => !excludedCards.has(item.card.id))
       .map((item) => item.card);
 
-    void triggerExport(visibleCards);
+    const safeName = boardTitle.replace(/[\\/:*?"<>|]/g, '_');
+    void triggerExport(visibleCards, `${safeName}.jpg`);
+  };
+
+  useEffect(() => {
+    if (!isEditingTitle) return;
+    titleInputRef.current?.focus();
+    titleInputRef.current?.select();
+  }, [isEditingTitle]);
+
+  const commitTitle = (raw: string) => {
+    const next = saveBoardTitle(raw);
+    setBoardTitle(next);
+    setTitleDraft(next);
+    setIsEditingTitle(false);
+  };
+
+  const beginEditTitle = () => {
+    setTitleDraft(boardTitle);
+    setIsEditingTitle(true);
+  };
+
+  const handleSaveWatermark = (config: WatermarkConfig) => {
+    saveWatermarkConfig(config);
+    setWatermark(config);
+    setIsWatermarkDialogOpen(false);
   };
   const renderGroups = (
     groups: [string, BoardItem[]][],
@@ -250,10 +293,69 @@ export default function SwapBoardView({ cards, stocks, tags, onClose }: SwapBoar
     );
   };
 
-  const BoardContent = ({ isExport }: { isExport: boolean }) => (
+  // 以渲染函数而非内部组件输出海报内容，避免父级草稿 state 更新时整树卸载导致输入框失焦
+  const renderBoardContent = (isExport: boolean) => (
     <>
       <div className="mb-8 text-center">
-        <h1 className="text-2xl font-bold tracking-widest text-slate-900">PLAVE交换清单</h1>
+        {isEditingTitle && !isExport && !isScreenshotMode ? (
+          <div className="mx-auto flex max-w-md items-center gap-2">
+            <input
+              ref={titleInputRef}
+              value={titleDraft}
+              maxLength={40}
+              aria-label="海报主标题"
+              className={`${inputClass} text-center text-2xl font-bold tracking-widest`}
+              onChange={(event) => setTitleDraft(event.target.value)}
+              onBlur={() => {
+                if (skipTitleBlurRef.current) {
+                  skipTitleBlurRef.current = false;
+                  return;
+                }
+                commitTitle(titleDraft);
+              }}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') {
+                  event.preventDefault();
+                  event.currentTarget.blur();
+                }
+                if (event.key === 'Escape') {
+                  event.preventDefault();
+                  skipTitleBlurRef.current = true;
+                  setTitleDraft(boardTitle);
+                  setIsEditingTitle(false);
+                }
+              }}
+            />
+            <button
+              type="button"
+              title="确认标题"
+              aria-label="确认标题"
+              className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-teal-700 text-white shadow-sm hover:bg-teal-800"
+              onMouseDown={(event) => {
+                event.preventDefault();
+                skipTitleBlurRef.current = true;
+                commitTitle(titleDraft);
+              }}
+            >
+              <Check className="h-4 w-4" />
+            </button>
+          </div>
+        ) : (
+          <div className="flex items-center justify-center gap-1.5">
+            <h1 className="text-2xl font-bold tracking-widest text-slate-900">{boardTitle}</h1>
+            {!isScreenshotMode && !isExport && (
+              <button
+                type="button"
+                onClick={beginEditTitle}
+                className="rounded-md p-1 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+                title="编辑标题"
+                aria-label="编辑海报主标题"
+              >
+                <Pencil className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+        )}
         <p className="mt-1 text-xs text-slate-400">Have & Want List</p>
         <p className="mt-1.5 text-[11px] font-medium tabular-nums text-slate-500">
           生成时间：{formatBeijingTimestamp()}
@@ -327,6 +429,18 @@ export default function SwapBoardView({ cards, stocks, tags, onClose }: SwapBoar
 
           <div className="flex items-center gap-2">
             <button
+              type="button"
+              onClick={() => setIsWatermarkDialogOpen(true)}
+              className="relative inline-flex h-10 w-10 items-center justify-center rounded-lg border border-slate-300 bg-white text-slate-700 shadow-sm hover:bg-slate-50"
+              title="水印"
+              aria-label="水印设置"
+            >
+              <Stamp className="h-4 w-4" />
+              {hasWatermarkText(watermark) && (
+                <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-teal-600" />
+              )}
+            </button>
+            <button
               onClick={handleExport}
               disabled={isExporting}
               className="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-teal-700 text-white shadow-sm hover:bg-teal-800 disabled:opacity-50"
@@ -353,8 +467,9 @@ export default function SwapBoardView({ cards, stocks, tags, onClose }: SwapBoar
         </div>
       )}
 
-      <div className={`mx-auto px-4 pt-8 sm:px-8 max-w-7xl ${isExporting ? 'hidden' : 'block'}`}>
-        <BoardContent isExport={false} />
+      <div className={`relative mx-auto px-4 pt-8 sm:px-8 max-w-7xl ${isExporting ? 'hidden' : 'block'}`}>
+        {renderBoardContent(false)}
+        <WatermarkOverlay config={watermark} />
       </div>
 
       {isExporting && (
@@ -370,10 +485,19 @@ export default function SwapBoardView({ cards, stocks, tags, onClose }: SwapBoar
         id="swap-board-export"
         ref={exportRef}
         style={{ position: 'fixed', top: 0, left: 0, zIndex: 9998 }}
-        className={`w-[1400px] bg-white p-8 pb-20 ${isExporting ? 'block' : 'hidden'}`}
+        className={`relative w-[1400px] bg-white p-8 pb-20 ${isExporting ? 'block' : 'hidden'}`}
       >
-        <BoardContent isExport={true} />
+        {renderBoardContent(true)}
+        <WatermarkOverlay config={watermark} />
       </div>
+
+      {isWatermarkDialogOpen && (
+        <WatermarkSettingsDialog
+          initialConfig={watermark}
+          onSave={handleSaveWatermark}
+          onCancel={() => setIsWatermarkDialogOpen(false)}
+        />
+      )}
     </div>
   );
 }

@@ -39,6 +39,7 @@ src/
 │   ├── useOrderDraft.ts        # 订单表单草稿 Hook：localStorage 键 plave_order_draft 的读写、失效物品校验与提示
 │   ├── useBoardExport.ts       # 换卡海报导出 Hook：图片跨域预加载 → 离屏 1400px 容器 → toJpeg 生成并写入隐形元数据
 │   ├── posterMetadata.ts       # 换卡海报 JPEG 注释段（COM 0xFFFE）隐形元数据二进制写入与解析，支持原图导入秒级无损还原
+│   ├── watermark.ts            # 海报主标题与水印配置：类型、默认值、色板常量、localStorage 读写与字段校验
 │   ├── cardFields.ts           # 表单字段类型（CardFieldValues）、解析与校验（parseFieldValues）
 │   ├── cardFilters.ts          # 列表筛选器纯函数：名称搜索、主题、收藏状态、属性（特典/瑕疵）、库存状态
 │   ├── cardStatus.ts           # 完备度状态机：short/complete/surplus 徽标文案与配色，含“已凑齐 + 在途”的 * 号规则
@@ -74,7 +75,9 @@ src/
     ├── BatchEditWizard.tsx     # 批量管理向导：步骤状态机与选卡搜索（第一步）
     ├── BatchEditFormStep.tsx   # 批量管理向导：属性设置步骤（从 Wizard 拆出）
     ├── BatchDefaultsDialog.tsx # 批量录入默认值弹窗
-    └── SwapBoardView.tsx       # 换卡海报页：HAVE/WANT 双栏、纯净截图模式、高清导出
+    ├── SwapBoardView.tsx       # 换卡海报页：HAVE/WANT 双栏、纯净截图模式、高清导出、主标题内联编辑与水印入口
+    ├── WatermarkOverlay.tsx    # 看板水印叠加层：预览 / 纯净截图 / 1400px 导出容器共用，不拦截点击、不撑开边界
+    └── WatermarkSettingsDialog.tsx # 水印配置弹窗：文字、颜色、透明度、单条/平铺及对应子选项
 ```
 
 **职责分工原则**：`src/lib/` 只做数据访问、类型定义与纯函数计算，不渲染 JSX；
