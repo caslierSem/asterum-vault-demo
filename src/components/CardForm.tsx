@@ -30,7 +30,7 @@ export default function CardForm({ prefill }: CardFormProps) {
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(
     prefill ? { type: 'success', text: '已复制原物品信息，请确认名称后保存。' } : null,
   );
-  const { tags, error: tagsError } = useTags();
+  const { tags, error: tagsError, reload: reloadTags } = useTags();
 
   const [batchDrafts, setBatchDrafts] = useState<ImportDraft[]>([]);
   const [isBatchProcessing, setIsBatchProcessing] = useState(false);
@@ -319,6 +319,7 @@ export default function CardForm({ prefill }: CardFormProps) {
           allTags={tags}
           tagIds={tagIds}
           onTagsChange={setTagIds}
+          onTagCreated={() => void reloadTags()}
         />
 
         {tagsError && <p className="text-sm text-rose-700">主题加载失败：{tagsError}</p>}

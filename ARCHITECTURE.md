@@ -60,7 +60,7 @@ src/
     ├── CardFilterBar.tsx       # 筛选条件条
     ├── CardPicker.tsx          # 卡片选择器（订单行选择物品）
     ├── TagManager.tsx          # 主题管理页：层级树、兄弟排序、增删改
-    ├── TagPicker.tsx           # 主题多选（含上限 3 的提示）
+    ├── TagPicker.tsx           # 主题多选（含上限 3 的提示），支持在录入/编辑卡片时现场新建主题并自动选中
     ├── TagFilterInput.tsx      # 按主题筛选的输入区
 │   ├── ScreenshotImport.tsx    # 截图与海报上传入口：优先解析海报原图元数据无损还原，缺失时降级走图像识别切图
 │   ├── ImportReview.tsx        # 截图识别结果复核（支持根据是否已还原元数据智能控制批量默认值弹窗）
@@ -412,5 +412,5 @@ openOrders               = 涉及该卡的约换中订单行数
 
 ---
 
-*文档基于 2026-11-20 的代码库与 supabase/full_schema.sql 编写；若后续新增迁移，
+*文档基于 2026-11-24 的代码库与 supabase/full_schema.sql 编写；若后续新增迁移，
 请以迁移文件与 full_schema.sql 的更新为准。*

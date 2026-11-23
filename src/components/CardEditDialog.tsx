@@ -10,6 +10,7 @@ import {
   type Tag,
 } from '@/lib/cards';
 import { fieldValuesFromCard, parseFieldValues, type CardFieldValues, type CardPrefill } from '@/lib/cardFields';
+import type { TagRecord } from '@/lib/tags';
 import { primaryButtonClass } from '@/lib/formStyles';
 import CardDetailFields from '@/components/CardDetailFields';
 import ConfirmDialog from '@/components/ConfirmDialog'; // 引入弹窗
@@ -22,6 +23,7 @@ interface CardEditDialogProps {
   onClose: () => void;
   onChanged: () => void;
   onDuplicate: (prefill: CardPrefill) => void;
+  onTagCreated?: (tag: TagRecord) => void;
 }
 
 export default function CardEditDialog({
@@ -32,6 +34,7 @@ export default function CardEditDialog({
   onClose,
   onChanged,
   onDuplicate,
+  onTagCreated,
 }: CardEditDialogProps) {
   const [values, setValues] = useState<CardFieldValues>(() => fieldValuesFromCard(card));
   const [tagIds, setTagIds] = useState<string[]>(() => card.tags.map((tag) => tag.id));
@@ -129,6 +132,7 @@ export default function CardEditDialog({
               allTags={allTags}
               tagIds={tagIds}
               onTagsChange={setTagIds}
+              onTagCreated={onTagCreated}
             />
             {error && (
               <div role="alert" className="mt-5 flex items-start gap-2 rounded-lg bg-rose-50 px-4 py-3 text-sm text-rose-800">

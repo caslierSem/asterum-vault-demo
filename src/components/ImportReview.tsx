@@ -30,7 +30,7 @@ export default function ImportReview({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [batchOpen, setBatchOpen] = useState(autoOpenBatchDefaults);
-  const { tags, error: tagsError } = useTags();
+  const { tags, error: tagsError, reload: reloadTags } = useTags();
 
   const updateDraft = (id: string, changes: Partial<Omit<ImportDraft, 'id' | 'image' | 'previewUrl'>>) => {
     setDrafts((prev) => prev.map((d) => (d.id === id ? { ...d, ...changes } : d)));
@@ -154,6 +154,7 @@ export default function ImportReview({
                 allTags={tags}
                 tagIds={draft.tagIds}
                 onTagsChange={(ids) => updateDraft(draft.id, { tagIds: ids })}
+                onTagCreated={() => void reloadTags()}
               />
             </div>
 
@@ -180,6 +181,7 @@ export default function ImportReview({
           allTags={tags}
           onClose={() => setBatchOpen(false)}
           onApply={applyBatchDefaults}
+          onTagCreated={() => void reloadTags()}
         />
       )}
     </section>

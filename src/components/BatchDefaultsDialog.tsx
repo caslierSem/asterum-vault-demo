@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { AlertCircle, X } from 'lucide-react';
 import type { Tag } from '@/lib/cards';
+import type { TagRecord } from '@/lib/tags';
 import { DEFAULT_FIELD_VALUES, parseFieldValues, type CardFieldValues } from '@/lib/cardFields';
 import { inputClass, labelClass, primaryButtonClass, secondaryButtonClass } from '@/lib/formStyles';
 import TagPicker from '@/components/TagPicker';
@@ -19,6 +20,7 @@ interface BatchDefaultsDialogProps {
   allTags: Tag[];
   onClose: () => void;
   onApply: (defaults: BatchDefaults) => void;
+  onTagCreated?: (tag: TagRecord) => void;
 }
 
 const INITIAL_VALUES: BatchFieldValues = {
@@ -30,7 +32,7 @@ const INITIAL_VALUES: BatchFieldValues = {
   is_special: DEFAULT_FIELD_VALUES.is_special,
 };
 
-export default function BatchDefaultsDialog({ allTags, onClose, onApply }: BatchDefaultsDialogProps) {
+export default function BatchDefaultsDialog({ allTags, onClose, onApply, onTagCreated }: BatchDefaultsDialogProps) {
   const [values, setValues] = useState<BatchFieldValues>(INITIAL_VALUES);
   const [tagIds, setTagIds] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -177,6 +179,7 @@ export default function BatchDefaultsDialog({ allTags, onClose, onApply }: Batch
                 setError(null);
                 setTagIds(ids);
               }}
+              onTagCreated={onTagCreated}
             />
           </div>
           {error && (

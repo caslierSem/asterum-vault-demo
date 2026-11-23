@@ -82,7 +82,7 @@ export async function listTags(): Promise<TagRecord[]> {
   return (data ?? []) as TagRecord[];
 }
 
-export async function createTag(name: string): Promise<void> {
+export async function createTag(name: string): Promise<TagRecord> {
   const { data: last, error: lastError } = await supabase
     .from('tags')
     .select('sort_order')
@@ -91,10 +91,13 @@ export async function createTag(name: string): Promise<void> {
     .maybeSingle<{ sort_order: number }>();
   if (lastError) throw toUserError(lastError);
 
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('tags')
-    .insert({ name: normalizeTagName(name), sort_order: last ? last.sort_order + 1 : 0 });
+    .insert({ name: normalizeTagName(name), sort_order: last ? last.sort_order + 1 : 0 })
+    .select('id, name, sort_order, created_at')
+    .single();
   if (error) throw toTagError(error);
+  return data as TagRecord;
 }
 
 export async function moveTag(tag: TagRecord, direction: -1 | 1, tags: TagRecord[]): Promise<void> {

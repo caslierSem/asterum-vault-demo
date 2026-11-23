@@ -1,6 +1,7 @@
 import type { Tag } from '@/lib/cards';
 import { inputClass, labelClass } from '@/lib/formStyles';
 import type { CardFieldValues } from '@/lib/cardFields';
+import type { TagRecord } from '@/lib/tags';
 import TagPicker from '@/components/TagPicker';
 
 interface CardDetailFieldsProps {
@@ -10,6 +11,7 @@ interface CardDetailFieldsProps {
   allTags: Tag[];
   tagIds: string[];
   onTagsChange: (ids: string[]) => void;
+  onTagCreated?: (tag: TagRecord) => void;
 }
 
 // 增加了 whitespace-nowrap 防止极端情况下换行
@@ -23,6 +25,7 @@ export default function CardDetailFields({
   allTags,
   tagIds,
   onTagsChange,
+  onTagCreated,
 }: CardDetailFieldsProps) {
   const id = (field: string) => `${idPrefix}-${field}`;
 
@@ -109,7 +112,12 @@ export default function CardDetailFields({
       
       <div className="sm:col-span-2">
         <span className={labelClass}>主题（最多 3 个）</span>
-        <TagPicker allTags={allTags} selectedIds={tagIds} onChange={onTagsChange} />
+        <TagPicker
+          allTags={allTags}
+          selectedIds={tagIds}
+          onChange={onTagsChange}
+          onTagCreated={onTagCreated}
+        />
       </div>
       <div className="sm:col-span-2">
         <label htmlFor={id('notes')} className={labelClass}>备注</label>

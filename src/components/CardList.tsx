@@ -38,7 +38,7 @@ export default function CardList({ onStartOrder, onDuplicate, readOnly }: CardLi
   const [editingCard, setEditingCard] = useState<Card | null>(null);
   const [filters, setFilters] = useState<CardFilters>(DEFAULT_FILTERS);
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
-  const { tags, error: tagsError } = useTags();
+  const { tags, error: tagsError, reload: reloadTags } = useTags();
   
   const [showBatchEdit, setShowBatchEdit] = useState(false);
   const [showSwapBoard, setShowSwapBoard] = useState(false); // 新增：控制海报页
@@ -127,6 +127,7 @@ export default function CardList({ onStartOrder, onDuplicate, readOnly }: CardLi
             setShowBatchEdit(false);
             void reload();
           }}
+          onTagCreated={() => void reloadTags()}
         />
       </section>
     );
@@ -285,6 +286,7 @@ export default function CardList({ onStartOrder, onDuplicate, readOnly }: CardLi
           reserved={editingReserved}
           openOrders={editingOpenOrders}
           allTags={tags}
+          onTagCreated={() => void reloadTags()}
           onClose={() => setEditingCard(null)}
           onChanged={() => {
             setEditingCard(null);

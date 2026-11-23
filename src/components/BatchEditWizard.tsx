@@ -1,6 +1,7 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { AlertCircle, Check, Loader2, Search, X } from 'lucide-react';
 import { type Card, type Tag, getCardImageUrl, getDisplayName, updateCard, setCardTags } from '@/lib/cards';
+import type { TagRecord } from '@/lib/tags';
 import { searchShellClass, searchInputClass, primaryButtonClass, secondaryButtonClass, dropdownMenuClass } from '@/lib/formStyles';
 import { matchesSearchQuery } from '@/lib/cardFilters';
 import BatchEditFormStep, { type BatchEditFormState } from '@/components/BatchEditFormStep';
@@ -10,6 +11,7 @@ interface BatchEditWizardProps {
   tags: Tag[];
   onClose: () => void;
   onSuccess: () => void;
+  onTagCreated?: (tag: TagRecord) => void;
 }
 
 type Step = 'select' | 'edit' | 'confirm' | 'result';
@@ -27,7 +29,7 @@ const INITIAL_FORM_STATE: BatchEditFormState = {
   newTagIds: [],
 };
 
-export default function BatchEditWizard({ cards, tags, onClose, onSuccess }: BatchEditWizardProps) {
+export default function BatchEditWizard({ cards, tags, onClose, onSuccess, onTagCreated }: BatchEditWizardProps) {
   const [step, setStep] = useState<Step>('select');
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -233,6 +235,7 @@ export default function BatchEditWizard({ cards, tags, onClose, onSuccess }: Bat
             allTags={tags}
             form={form}
             onChange={patchForm}
+            onTagCreated={onTagCreated}
           />
         )}
 

@@ -1,5 +1,6 @@
 import { inputClass } from '@/lib/formStyles';
 import type { Tag } from '@/lib/cards';
+import type { TagRecord } from '@/lib/tags';
 import TagPicker from '@/components/TagPicker';
 
 export interface BatchEditFormState {
@@ -20,6 +21,7 @@ interface BatchEditFormStepProps {
   allTags: Tag[];
   form: BatchEditFormState;
   onChange: (patch: Partial<BatchEditFormState>) => void;
+  onTagCreated?: (tag: TagRecord) => void;
 }
 
 /**
@@ -30,6 +32,7 @@ export default function BatchEditFormStep({
   allTags,
   form,
   onChange,
+  onTagCreated,
 }: BatchEditFormStepProps) {
   return (
     <div className="space-y-6 max-w-xl mx-auto w-full pb-40">
@@ -162,6 +165,7 @@ export default function BatchEditFormStep({
               allTags={allTags}
               selectedIds={form.newTagIds}
               onChange={(newTagIds) => onChange({ newTagIds })}
+              onTagCreated={onTagCreated}
             />
           )}
         </div>
