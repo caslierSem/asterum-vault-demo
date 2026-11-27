@@ -1,0 +1,34 @@
+---
+alwaysApply: true
+---
+# Asterum Vault 项目开发通用规范
+
+## 1. 技术栈与视觉规范
+- **技术栈**：Vite 7 + React 18 + TypeScript + Tailwind CSS 3 + Supabase（前端直连，无自建后端）。
+- **图标与样式**：全站图标统一使用 `lucide-react`；所有表单输入框、按钮、弹窗遮罩与圆角卡片必须优先复用 `src/lib/formStyles.ts` 及 `src/components/ConfirmDialog.tsx` 的现有样式规范，保持视觉高度统一。
+- **职责拆分**：纯业务逻辑、数据请求与计算放进 `src/lib/`（不含 JSX）；UI 展示与交互组件放进 `src/components/`。关键状态与接口需补充简明中文注释。
+
+## 2. 核心业务逻辑与状态机（绝对禁区）
+- **库存公式锁定**：严禁修改 `useInventory.ts` 中的推导逻辑。必须保持：`可用 available = 库存 quantity - 在途 reserved`；`总资产 = 可用 + 待入库 pendingIn`。
+- **状态判定锁定**：统一使用 `cardStatus.ts` 的 `getCompletionStatus` 判定（缺/多/已凑齐/已凑齐*）。严禁在组件内部手写新的判定逻辑。
+- **订单原子操作**：订单的创建/完成/取消必须调用底层的 Supabase RPC 函数（如 `create_order` 等），**严禁在前端用多个独立的 `update` 语句去模拟库存流转**。
+
+## 3. 数据库与隐私红线（严禁擅自改动）
+- **数据库结构锁定**：除非明确要求，否则严禁修改 `supabase/full_schema.sql` 中的表结构、触发器、RLS 策略及列级权限。
+- **访客隐私隔离**：严禁向 `anon` 访客暴露 `cards.notes`、`orders.counterparty`、`orders.note` 等私密字段；必须保持 `CARD_SELECT_PUBLIC` 与 `ORDER_SELECT_PUBLIC` 的列级隔离机制不被破坏。
+- **字段防呆**：调用或修改数据库字段前，必须先去 `src/lib/cards.ts` 或 `full_schema.sql` 核实，**严禁凭空捏造不存在的字段名**。
+
+## 4. 换卡海报与截图导出防线
+- **三端一致性**：涉及换卡海报（`SwapBoardView.tsx`）的视觉修改时，必须确保 **网页普通预览、纯净截图模式、以及 `useBoardExport.ts` 离屏 1400px 导出大图** 三处渲染完全同步。
+- **导出机制锁定**：严禁破坏 `useBoardExport.ts` 中固定 1400px 离屏容器渲染的逻辑；严禁破坏 `posterMetadata.ts` 的 JPEG 隐形元数据（COM 段）写入。
+- **截屏防呆**：禁止用 `opacity: 0` 或 `left: -9999px` 隐藏导出容器，必须用 `z-index` 遮罩。严禁擅自调高 `pixelRatio`（超过 1.5 易导致 iOS 内存溢出白屏）。
+
+## 5. iOS 触控与体验红线
+- **防缩放**：全站所有 `<input>` 和 `<textarea>` 在移动端必须保持至少 `text-base`（16px）字号，**绝对不能缩小至 `text-sm`（14px）**，防止 iOS Safari 点击时强制放大页面。
+- **防误触**：底部操作栏需考虑 `safe-area-inset-bottom`（iPhone 底部小白条），点击热区不小于 44x44px。
+- **草稿防丢**：订单创建页（`OrderForm.tsx`）的 `localStorage` 草稿缓存与恢复逻辑，严禁在后续重构中擅自删除。
+
+## 6. 交付与文档同步标准
+- **编译自检**：每次完成代码修改后，必须自动运行 `npm run build`（或 `npm run typecheck`）验证 TypeScript 类型与打包零报错后才能结束任务。
+- **文档同步**：如果本次改动新增了用户可见功能，自动同步更新 `README.md`；如果新增/删除/拆分了文件，自动同步更新 `ARCHITECTURE.md`。
+- **克制修改**：修改 A 组件时，严禁擅自去重写 B 组件。遇到需要全局改动时，必须先提方案，等待确认后再动手。
