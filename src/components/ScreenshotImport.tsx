@@ -1,14 +1,21 @@
 import { useState, type ChangeEvent, type DragEvent } from 'react';
 import { AlertCircle, CheckCircle2, ImagePlus, Loader2 } from 'lucide-react';
+import { SwitchEntryModeButton } from '@/components/EntryModeSelector';
 import ImportReview, { type ImportDraft } from '@/components/ImportReview';
 import { cropToCanvas, canvasToBlob, detectCardRegions, loadImageFromFile } from '@/lib/cardDetection';
 import { DEFAULT_FIELD_VALUES } from '@/lib/cardFields';
 import { extractMetadataFromImageFile } from '@/lib/posterMetadata';
+import { createUuid } from '@/lib/uuid';
 import { useTags } from '@/lib/useTags';
 
 type Stage = 'idle' | 'processing' | 'review';
 
-export default function ScreenshotImport() {
+interface ScreenshotImportProps {
+  /** 回到录入方式选择页；不参与识别与保存 */
+  onSwitchMode?: () => void;
+}
+
+export default function ScreenshotImport({ onSwitchMode }: ScreenshotImportProps) {
   const [stage, setStage] = useState<Stage>('idle');
   const [drafts, setDrafts] = useState<ImportDraft[]>([]);
   const [isMetadataRestored, setIsMetadataRestored] = useState(false);
@@ -47,7 +54,7 @@ export default function ScreenshotImport() {
             .filter((id): id is string => Boolean(id));
 
           newDrafts.push({
-            id: crypto.randomUUID(),
+            id: createUuid(),
             image: blob,
             previewUrl: URL.createObjectURL(blob),
             values: {
@@ -70,7 +77,7 @@ export default function ScreenshotImport() {
         for (let i = 0; i < regions.length; i++) {
           const blob = await canvasToBlob(cropToCanvas(image, regions[i]));
           newDrafts.push({
-            id: crypto.randomUUID(),
+            id: createUuid(),
             image: blob,
             previewUrl: URL.createObjectURL(blob),
             values: { ...DEFAULT_FIELD_VALUES },
@@ -121,16 +128,20 @@ export default function ScreenshotImport() {
 
   if (stage === 'review') {
     return (
-      <ImportReview
-        initialDrafts={drafts}
-        autoOpenBatchDefaults={!isMetadataRestored}
-        onComplete={handleComplete}
-      />
+      <section className="mx-auto w-full max-w-2xl">
+        {onSwitchMode && <SwitchEntryModeButton onClick={onSwitchMode} />}
+        <ImportReview
+          initialDrafts={drafts}
+          autoOpenBatchDefaults={!isMetadataRestored}
+          onComplete={handleComplete}
+        />
+      </section>
     );
   }
 
   return (
     <section className="mx-auto w-full max-w-2xl">
+      {onSwitchMode && <SwitchEntryModeButton onClick={onSwitchMode} />}
       <div className="mb-6">
         <h1 className="text-2xl font-semibold text-slate-900">截图自动录入</h1>
         <p className="mt-1 text-sm text-slate-500">

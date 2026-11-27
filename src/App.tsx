@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
-import { KeyRound, LayoutGrid, LogOut, PlusCircle, ReceiptText, ScanLine, Tags, ArrowUp, type LucideIcon } from 'lucide-react';
+import { KeyRound, LayoutGrid, LogOut, PlusCircle, ReceiptText, Tags, ArrowUp, type LucideIcon } from 'lucide-react';
 import BrandLogo from '@/components/BrandLogo';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import CardForm from '@/components/CardForm';
 import CardList from '@/components/CardList';
+import EntryModeSelector from '@/components/EntryModeSelector';
 import GuestPasscodeModal from '@/components/GuestPasscodeModal';
 import OrdersPage from '@/components/OrdersPage';
 import ScreenshotImport from '@/components/ScreenshotImport';
@@ -21,11 +22,12 @@ import type { OrderDraftRequest } from '@/lib/orders';
 import { clearGuest, isGuestStored, isOwnerAccount, signOutOwner, storeGuest, type Role } from '@/lib/session';
 import { supabase } from '@/lib/supabase';
 
-type View = 'entry' | 'import' | 'list' | 'tags' | 'orders';
+type View = 'entry-select' | 'entry' | 'import' | 'list' | 'tags' | 'orders';
+
+const ENTRY_VIEWS: View[] = ['entry-select', 'entry', 'import'];
 
 const NAV_ITEMS: { view: View; label: string; icon: LucideIcon }[] = [
   { view: 'entry', label: '录入', icon: PlusCircle },
-  { view: 'import', label: '截图录入', icon: ScanLine },
   { view: 'list', label: '列表', icon: LayoutGrid },
   { view: 'tags', label: '主题', icon: Tags },
   { view: 'orders', label: '订单', icon: ReceiptText },
@@ -193,11 +195,12 @@ function App() {
           <div className="flex items-center gap-2">
             <nav className="flex gap-1 rounded-lg bg-slate-100 p-1">
               {visibleNavItems.map(({ view: target, label, icon: Icon }) => {
-                const active = view === target;
+                const isEntry = target === 'entry';
+                const active = isEntry ? ENTRY_VIEWS.includes(view) : view === target;
                 return (
                   <button
                     key={target}
-                    onClick={() => navigate(target)}
+                    onClick={() => navigate(isEntry ? 'entry-select' : target)}
                     aria-current={active ? 'page' : undefined}
                     className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-md px-2.5 py-1.5 text-sm font-medium transition md:px-3 ${
                       active
@@ -239,8 +242,16 @@ function App() {
       {role !== null && (
         <main className="px-4 pt-20 pb-8 sm:px-6 sm:pb-10">
           <ErrorBoundary>
-            {view === 'entry' && <CardForm prefill={entryPrefill} />}
-            {view === 'import' && <ScreenshotImport />}
+            {view === 'entry-select' && (
+              <EntryModeSelector
+                onSelectSingle={() => navigate('entry')}
+                onSelectCollage={() => navigate('import')}
+              />
+            )}
+            {view === 'entry' && (
+              <CardForm prefill={entryPrefill} onSwitchMode={() => navigate('entry-select')} />
+            )}
+            {view === 'import' && <ScreenshotImport onSwitchMode={() => navigate('entry-select')} />}
             {view === 'list' && (
               <CardList onStartOrder={startOrder} onDuplicate={duplicateCard} readOnly={role === 'guest'} />
             )}

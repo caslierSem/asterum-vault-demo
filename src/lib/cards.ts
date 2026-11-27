@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase';
 import { toUserError } from '@/lib/dbError';
+import { createUuid } from '@/lib/uuid';
 
 export interface Tag {
   id: string;
@@ -149,7 +150,7 @@ export async function deleteCard(card: Card): Promise<void> {
 
 async function uploadCardImage(file: File): Promise<string> {
   const extension = file.name.split('.').pop()?.toLowerCase() || 'jpg';
-  const path = `${crypto.randomUUID()}.${extension}`;
+  const path = `${createUuid()}.${extension}`;
   const { error } = await supabase.storage
     .from(BUCKET)
     .upload(path, file, { contentType: file.type, cacheControl: '3600' });
