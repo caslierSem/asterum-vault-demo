@@ -1,16 +1,16 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeft, Eye, EyeOff, CheckSquare, Square, ChevronUp, ChevronDown, Download, Loader2, Pencil, Stamp, Check } from 'lucide-react';
-import {
-  type Card,
-  getCardImageUrl,
-  getDisplayName,
-  formatPrice,
-  getSurplus,
-  getMissing,
-} from '@/lib/cards';
+import { ArrowLeft, Eye, EyeOff, ChevronUp, ChevronDown, Download, Loader2, Pencil, Stamp, Check } from 'lucide-react';
+import { type Card } from '@/lib/cards';
 import { buildTagRank, type TagRecord } from '@/lib/tags';
 import { type CardStock } from '@/lib/useInventory';
 import { useBoardExport } from '@/lib/useBoardExport';
+import {
+  applyGroupOrder,
+  buildHaveWantGroups,
+  formatBeijingTimestamp,
+  moveGroupInOrder,
+  type BoardGroup,
+} from '@/lib/swapBoard';
 import {
   hasWatermarkText,
   loadBoardTitle,
@@ -19,6 +19,7 @@ import {
   saveWatermarkConfig,
   type WatermarkConfig,
 } from '@/lib/watermark';
+import SwapBoardCard from '@/components/SwapBoardCard';
 import WatermarkOverlay from '@/components/WatermarkOverlay';
 import WatermarkSettingsDialog from '@/components/WatermarkSettingsDialog';
 import { inputClass } from '@/lib/formStyles';
@@ -29,86 +30,6 @@ interface SwapBoardViewProps {
   tags: TagRecord[];
   onClose: () => void;
 }
-
-interface BoardItem {
-  card: Card;
-  count: number;
-}
-
-interface CardBlockProps {
-  item: BoardItem;
-  showPrice: boolean;
-  isScreenshotMode: boolean;
-  isExcluded: boolean;
-  onToggle: () => void;
-  isExport: boolean;
-}
-
-/**
- * 获取固定北京东八区（UTC+8）的当前时间戳，精确到分钟
- */
-function formatBeijingTimestamp(date: Date = new Date()): string {
-  const formatter = new Intl.DateTimeFormat('zh-CN', {
-    timeZone: 'Asia/Shanghai',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  });
-
-  const parts = formatter.formatToParts(date);
-  const get = (type: Intl.DateTimeFormatPartTypes) =>
-    parts.find((p) => p.type === type)?.value ?? '';
-
-  return `${get('year')}-${get('month')}-${get('day')} ${get('hour')}:${get('minute')} (UTC+8)`;
-}
-
-/**
- * 海报中的单张物品展示卡片组件
- * data-export-card-id={isExport ? item.card.id : undefined}，方便导出瞬间精准测量每张卡在画布上的位置
- */
-const CardBlock = ({ item, showPrice, isScreenshotMode, isExcluded, onToggle, isExport }: CardBlockProps) => (
-  <div className={`w-full max-w-[160px] mx-auto group relative flex flex-col gap-1.5 transition-opacity ${isExcluded ? 'opacity-20 grayscale' : 'opacity-100'}`}>
-    <div
-      data-export-card-id={isExport ? item.card.id : undefined}
-      className="relative w-full h-[213px] overflow-hidden rounded-lg bg-white border border-slate-200 shadow-sm"
-    >
-      {item.card.image_path ? (
-        <img src={getCardImageUrl(item.card.image_path)} className="h-full w-full object-cover object-top" crossOrigin="anonymous" />
-      ) : (
-        <div className="flex h-full items-center justify-center text-xs text-slate-400">无图</div>
-      )}
-
-      {!isScreenshotMode && !isExport && (
-        <button onClick={onToggle} className="absolute left-1 top-1 rounded bg-white/90 shadow-sm transition hover:scale-110">
-          {isExcluded ? <Square className="h-5 w-5 text-slate-400" /> : <CheckSquare className="h-5 w-5 text-teal-600" />}
-        </button>
-      )}
-
-      <div className="absolute right-1 top-1 flex flex-col gap-1 items-end">
-        {item.card.is_special && <span className="flex h-5 w-5 items-center justify-center rounded bg-emerald-600 text-[11px] font-bold text-white shadow">特</span>}
-        {item.card.is_defective && <span className="flex h-5 w-5 items-center justify-center rounded bg-rose-600 text-[11px] font-bold text-white shadow">瑕</span>}
-      </div>
-
-      <div className="absolute bottom-1.5 right-1.5 rounded-full bg-black/70 px-2.5 py-1 text-base font-bold text-white shadow-lg backdrop-blur-sm">
-        ×{item.count}
-      </div>
-    </div>
-
-    <div className="flex flex-col items-center px-0.5 gap-0.5">
-      <p className="truncate w-full text-center text-[13px] font-medium text-slate-900" title={getDisplayName(item.card)}>
-        {getDisplayName(item.card)}
-      </p>
-      {showPrice && (
-        <p className="text-[11px] font-semibold text-slate-600">
-          {formatPrice(item.card.price)}
-        </p>
-      )}
-    </div>
-  </div>
-);
 
 export default function SwapBoardView({ cards, stocks, tags, onClose }: SwapBoardViewProps) {
   const [excludedCards, setExcludedCards] = useState<Set<string>>(new Set());
@@ -140,61 +61,20 @@ export default function SwapBoardView({ cards, stocks, tags, onClose }: SwapBoar
   // 复用全站统一的 Tag 权重顺序，确保海报默认排序与库存列表完全一致
   const tagRank = useMemo(() => buildTagRank(tags), [tags]);
 
-  const { haveGroups, wantGroups } = useMemo(() => {
-    const hGroups = new Map<string, { rank: number; items: BoardItem[] }>();
-    const wGroups = new Map<string, { rank: number; items: BoardItem[] }>();
-
-    cards.forEach((card) => {
-      const stock = stocks.get(card.id) || { available: 0, pendingIn: 0 };
-      const surplus = getSurplus(stock.available, stock.pendingIn, card.target_quantity);
-      const missing = getMissing(stock.available, stock.pendingIn, card.target_quantity);
-
-      if (surplus === 0 && missing === 0) return;
-
-      const sortedTags = [...card.tags].sort(
-        (a, b) => (tagRank.get(a.id) ?? Infinity) - (tagRank.get(b.id) ?? Infinity),
-      );
-      const groupName = sortedTags.length > 0
-        ? sortedTags.map((t) => `# ${t.name}`).join(' · ')
-        : '无主题';
-      const groupRank = sortedTags.length > 0
-        ? (tagRank.get(sortedTags[0].id) ?? Infinity)
-        : Infinity;
-
-      if (surplus > 0) {
-        const entry = hGroups.get(groupName) ?? { rank: groupRank, items: [] };
-        entry.items.push({ card, count: surplus });
-        hGroups.set(groupName, entry);
-      } else if (missing > 0) {
-        const entry = wGroups.get(groupName) ?? { rank: groupRank, items: [] };
-        entry.items.push({ card, count: missing });
-        wGroups.set(groupName, entry);
-      }
-    });
-
-    const sortGroups = (map: Map<string, { rank: number; items: BoardItem[] }>): [string, BoardItem[]][] =>
-      Array.from(map.entries())
-        .sort((a, b) => a[1].rank - b[1].rank || a[0].localeCompare(b[0], 'zh-CN'))
-        .map(([name, data]) => [name, data.items]);
-
-    return { haveGroups: sortGroups(hGroups), wantGroups: sortGroups(wGroups) };
-  }, [cards, stocks, tagRank]);
+  const { haveGroups, wantGroups } = useMemo(
+    () => buildHaveWantGroups(cards, stocks, tagRank),
+    [cards, stocks, tagRank],
+  );
 
   const moveGroup = (
     direction: -1 | 1,
     groupName: string,
     currentOrder: string[],
-    defaultGroups: [string, BoardItem[]][],
+    defaultGroups: BoardGroup[],
     setOrder: (order: string[]) => void,
   ) => {
-    const order = currentOrder.length > 0 ? [...currentOrder] : defaultGroups.map((g) => g[0]);
-    const index = order.indexOf(groupName);
-    if (index === -1 || (direction === -1 && index === 0) || (direction === 1 && index === order.length - 1)) return;
-
-    const temp = order[index];
-    order[index] = order[index + direction];
-    order[index + direction] = temp;
-    setOrder(order);
+    const next = moveGroupInOrder(direction, groupName, currentOrder, defaultGroups);
+    if (next) setOrder(next);
   };
 
   // 收集当前所有未被排除的展示卡片并触发导出
@@ -232,14 +112,12 @@ export default function SwapBoardView({ cards, stocks, tags, onClose }: SwapBoar
     setIsWatermarkDialogOpen(false);
   };
   const renderGroups = (
-    groups: [string, BoardItem[]][],
+    groups: BoardGroup[],
     customOrder: string[],
     setOrder: (order: string[]) => void,
     isExport: boolean = false,
   ) => {
-    const displayGroups = customOrder.length > 0
-      ? (customOrder.map((name) => groups.find((g) => g[0] === name)).filter(Boolean) as [string, BoardItem[]][])
-      : groups;
+    const displayGroups = applyGroupOrder(groups, customOrder);
 
     return (
       <div className="space-y-6">
@@ -275,7 +153,7 @@ export default function SwapBoardView({ cards, stocks, tags, onClose }: SwapBoar
                   : (viewMode === 'both' ? 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4' : 'grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8')
               }`}>
                 {itemsToRender.map((item) => (
-                  <CardBlock
+                  <SwapBoardCard
                     key={item.card.id}
                     item={item}
                     showPrice={showPrice}
@@ -401,7 +279,7 @@ export default function SwapBoardView({ cards, stocks, tags, onClose }: SwapBoar
   return (
     <div className="min-h-screen bg-white pb-20">
       {!isScreenshotMode && (
-        <div className="sticky top-0 z-50 flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 bg-white/90 px-4 py-3 backdrop-blur-md sm:px-6">
+        <div className="sticky top-0 z-50 mx-auto flex w-full max-w-7xl flex-wrap items-center justify-between gap-4 border-b border-slate-200 bg-white/90 px-4 py-3 backdrop-blur-md sm:px-8">
           <button onClick={onClose} className="flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-slate-900">
             <ArrowLeft className="h-4 w-4" /> 返回列表
           </button>

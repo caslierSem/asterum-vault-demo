@@ -25,7 +25,7 @@ function StockFigure({ label, value, tone }: { label: string; value: number; ton
   const isZero = value === 0;
   return (
     <div className="flex flex-1 items-baseline justify-center gap-1 border-r border-slate-200 last:border-0">
-      <span className={`text-[11px] ${isZero ? 'text-slate-300' : 'text-slate-500'}`}>{label}</span>
+      <span className={`whitespace-nowrap text-[11px] ${isZero ? 'text-slate-300' : 'text-slate-500'}`}>{label}</span>
       <span className={`text-sm font-semibold tabular-nums ${isZero ? 'text-slate-300' : tone}`}>
         {value}
       </span>
@@ -52,7 +52,7 @@ export default function CardListItem({
 
   return (
     <li className="group flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md sm:flex-row">
-      <div className="relative flex h-40 shrink-0 items-center justify-center bg-slate-100 sm:h-auto sm:w-28">
+      <div className="relative flex h-40 shrink-0 items-center justify-center bg-slate-100 sm:aspect-[2/3] sm:h-auto sm:w-32 sm:self-stretch lg:aspect-[5/8] lg:w-36">
         {card.image_path ? (
           <>
             {!imgLoaded && <div className="absolute inset-0 bg-slate-200 animate-pulse" />}
@@ -61,7 +61,7 @@ export default function CardListItem({
               alt={displayName}
               loading="lazy"
               onLoad={() => setImgLoaded(true)}
-              className={`absolute inset-0 h-full w-full object-cover object-[center_15%] transition-opacity duration-300 ${imgLoaded ? 'opacity-100' : 'opacity-0'}`}
+              className={`absolute inset-0 h-full w-full object-cover object-[center_15%] transition-opacity duration-300 sm:object-contain sm:object-center ${imgLoaded ? 'opacity-100' : 'opacity-0'}`}
             />
           </>
         ) : (
@@ -89,58 +89,58 @@ export default function CardListItem({
         )}
       </div>
 
-      <div className="flex min-w-0 flex-1 flex-col gap-3 p-3 sm:p-4">
-        <div className="flex items-start justify-between gap-2">
-          <div className="min-w-0 space-y-1.5">
-            <h2 className="line-clamp-2 text-sm font-semibold leading-snug text-slate-900 sm:text-base">
-              {displayName}
-            </h2>
+      <div className="flex min-w-0 flex-1 flex-col gap-3 p-3">
+        <div className="min-w-0 space-y-1.5">
+          <h2 className="line-clamp-2 text-sm font-semibold leading-snug text-slate-900 sm:text-base">
+            {displayName}
+          </h2>
+          <div className="flex items-center justify-between gap-2">
             <span
-              className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1 ring-inset ${statusBadge.colorClass}`}
+              className={`inline-flex shrink-0 whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1 ring-inset ${statusBadge.colorClass}`}
             >
               {statusBadge.label}
             </span>
-          </div>
-          {!readOnly && (
-          <div className="flex shrink-0 items-center">
-            {hasNotes && (
-              <button
-                onClick={() => setShowNotes(true)}
-                aria-label={`查看 ${displayName} 的备注`}
-                title="查看备注"
-                className={`${iconButtonClass} hover:bg-amber-50 hover:text-amber-700`}
-              >
-                <StickyNote className="h-4 w-4" />
-              </button>
+            {!readOnly && (
+              <div className="flex shrink-0 items-center">
+                {hasNotes && (
+                  <button
+                    onClick={() => setShowNotes(true)}
+                    aria-label={`查看 ${displayName} 的备注`}
+                    title="查看备注"
+                    className={`${iconButtonClass} hover:bg-amber-50 hover:text-amber-700`}
+                  >
+                    <StickyNote className="h-4 w-4" />
+                  </button>
+                )}
+                <button
+                  onClick={onStartOrder}
+                  disabled={busy}
+                  aria-label={`为 ${displayName} 发起交易`}
+                  title="发起交易"
+                  className={`${iconButtonClass} hover:bg-teal-50 hover:text-teal-700`}
+                >
+                  <ArrowLeftRight className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={onEdit}
+                  disabled={busy}
+                  aria-label={`编辑 ${displayName}`}
+                  title="编辑"
+                  className={iconButtonClass}
+                >
+                  <Pencil className="h-4 w-4" />
+                </button>
+              </div>
             )}
-            <button
-              onClick={onStartOrder}
-              disabled={busy}
-              aria-label={`为 ${displayName} 发起交易`}
-              title="发起交易"
-              className={`${iconButtonClass} hover:bg-teal-50 hover:text-teal-700`}
-            >
-              <ArrowLeftRight className="h-4 w-4" />
-            </button>
-            <button
-              onClick={onEdit}
-              disabled={busy}
-              aria-label={`编辑 ${displayName}`}
-              title="编辑"
-              className={iconButtonClass}
-            >
-              <Pencil className="h-4 w-4" />
-            </button>
           </div>
-          )}
         </div>
 
         {card.tags.length > 0 && (
           <div className="flex flex-wrap gap-x-3 gap-y-1">
             {card.tags.map((tag) => (
-              <span key={tag.id} className="inline-flex items-center gap-0.5 text-xs font-medium text-emerald-700">
-                <Hash className="h-3 w-3" />
-                {tag.name}
+              <span key={tag.id} className="inline-flex items-start gap-0.5 text-xs font-medium text-emerald-700">
+                <Hash className="mt-0.5 h-3 w-3 shrink-0" />
+                <span className="min-w-0">{tag.name}</span>
               </span>
             ))}
           </div>
@@ -151,24 +151,24 @@ export default function CardListItem({
             <p className="font-semibold text-slate-900">库存 {card.quantity}</p>
           ) : (
           <div className="flex items-center justify-between gap-2">
-            <span>库存</span>
-            <div className="flex items-center gap-1 rounded-lg bg-slate-100 p-0.5">
+            <span className="shrink-0 whitespace-nowrap">库存</span>
+            <div className="flex min-w-0 items-center gap-1 rounded-lg bg-slate-100 p-0.5 lg:gap-0.5">
               <button
                 onClick={() => onAdjustQuantity(-1)}
                 disabled={busy || card.quantity <= stock.reserved}
                 aria-label={`减少 ${displayName} 数量`}
-                className={stepButtonClass}
+                className={`${stepButtonClass} lg:h-7 lg:w-7`}
               >
                 <Minus className="h-3.5 w-3.5" />
               </button>
-              <span className="min-w-[2rem] text-center font-semibold tabular-nums text-slate-900">
+              <span className="min-w-[1.5rem] text-center font-semibold tabular-nums text-slate-900">
                 {card.quantity}
               </span>
               <button
                 onClick={() => onAdjustQuantity(1)}
                 disabled={busy}
                 aria-label={`增加 ${displayName} 数量`}
-                className={stepButtonClass}
+                className={`${stepButtonClass} lg:h-7 lg:w-7`}
               >
                 <Plus className="h-3.5 w-3.5" />
               </button>

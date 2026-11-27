@@ -187,10 +187,15 @@ function App() {
     <div className="min-h-screen overflow-x-hidden bg-slate-50 text-slate-900 relative">
       <header className="fixed top-0 left-0 right-0 z-50 border-b border-slate-200 bg-white/90 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-2 sm:gap-4 sm:px-6 sm:py-3">
-          <div className="flex items-center gap-2.5 min-w-0">
+          <button
+            type="button"
+            onClick={() => navigate('list')}
+            aria-label="前往列表"
+            className="flex min-h-11 min-w-0 items-center gap-2.5 rounded-lg text-left transition hover:opacity-80"
+          >
             <BrandLogo />
             <span className="hidden sm:block whitespace-nowrap text-base font-semibold tracking-tight truncate max-w-[120px] sm:max-w-none">Asterum Vault</span>
-          </div>
+          </button>
 
           <div className="flex items-center gap-2">
             <nav className="flex gap-1 rounded-lg bg-slate-100 p-1">
