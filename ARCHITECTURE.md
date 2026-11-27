@@ -41,10 +41,13 @@ src/
 │   ├── useBoardExport.ts       # 换卡海报导出 Hook：图片跨域预加载 → 离屏 1400px 容器 → toJpeg 生成并写入隐形元数据
 │   ├── posterMetadata.ts       # 换卡海报 JPEG 注释段（COM 0xFFFE）隐形元数据二进制写入与解析，支持原图导入秒级无损还原
 │   ├── watermark.ts            # 海报主标题与水印配置：类型、默认值、色板常量、localStorage 读写与字段校验
+│   ├── swapBoard.ts            # 换卡海报纯计算：北京时间戳、HAVE/WANT 分组、自定义分组顺序与相邻交换
 │   ├── cardFields.ts           # 表单字段类型（CardFieldValues）、解析与校验（parseFieldValues）
 │   ├── cardFilters.ts          # 列表筛选器纯函数：名称搜索、主题、收藏状态、属性（特典/瑕疵）、库存状态
 │   ├── cardStatus.ts           # 完备度状态机：short/complete/surplus 徽标文案与配色，含“已凑齐 + 在途”的 * 号规则
-│   ├── cardDetection.ts        # 截图录入识别引擎：两阶段背景检测、动态分辨率下限、标签剥离与一维投影谷底切分
+│   ├── cardDetection.ts        # 截图识别对外入口：读图、两阶段编排、裁切导出（Rect / detectCardRegions 等导出保持不变）
+│   ├── cardMask.ts             # 识别内部：前景掩膜、连通域、顶栏标签与标题带剥离、包围盒内收
+│   ├── cardRegionSplit.ts      # 识别内部：投影谷底切分、灰底容器二次拆分、去重与阅读顺序
 │   ├── imageCompression.ts     # 上传前图片压缩（Canvas 重绘为 JPEG）
 │   ├── imageCrop.ts            # 单卡录入裁剪：按像素区域与旋转角度导出 JPEG
 │   ├── uuid.ts                 # UUID v4：优先 randomUUID，非安全上下文回退 getRandomValues
@@ -80,6 +83,7 @@ src/
     ├── BatchEditWizard.tsx     # 批量管理向导：步骤状态机与选卡搜索（第一步）
     ├── BatchEditFormStep.tsx   # 批量管理向导：属性设置步骤（从 Wizard 拆出）
     ├── BatchDefaultsDialog.tsx # 批量录入默认值弹窗
+    ├── SwapBoardCard.tsx       # 海报单张物品卡：预览、纯净截图与 1400px 导出共用，含导出定位标记
     ├── SwapBoardView.tsx       # 换卡海报页：HAVE/WANT 双栏、纯净截图模式、高清导出、主标题内联编辑与水印入口
     ├── WatermarkOverlay.tsx    # 看板水印叠加层：预览 / 纯净截图 / 1400px 导出容器共用，不拦截点击、不撑开边界
     └── WatermarkSettingsDialog.tsx # 水印配置弹窗：文字、颜色、透明度、单条/平铺及对应子选项
