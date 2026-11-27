@@ -3,6 +3,45 @@ import { toJpeg } from 'html-to-image';
 import { getCardImageUrl, stripCardLabelPrefixes, type Card } from '@/lib/cards';
 import { embedMetadataIntoJpeg, type EmbeddedCardMeta } from '@/lib/posterMetadata';
 
+/** 读取已经落地的像素宽度；百分比或 auto 无法在克隆里复现，直接跳过 */
+function usedPx(el: HTMLElement, prop: 'width'): string | null {
+  const value = getComputedStyle(el).getPropertyValue(prop).trim();
+  if (!value.endsWith('px')) return null;
+  const size = parseFloat(value);
+  if (!Number.isFinite(size) || size <= 0) return null;
+  return value;
+}
+
+/**
+ * 单侧格子比 160px 卡面宽时，`mx-auto` 会把卡面居中。
+ * 这段留白在网格项上 getComputedStyle 仍返回 0，foreignObject 也会丢掉。
+ * 用轨道宽度和卡壳宽度把居中量写成真正的像素 margin，克隆才画在同一位置。
+ */
+function centeredMarginLeft(shell: HTMLElement, grid: HTMLElement, tracks: string): string {
+  const sizes = (tracks.match(/[\d.]+px/g) ?? [])
+    .map((part) => parseFloat(part))
+    .filter((size) => Number.isFinite(size) && size > 0);
+  if (sizes.length === 0) return '0px';
+  const index = Math.max(0, Array.from(grid.children).indexOf(shell));
+  const cell = sizes[index % sizes.length];
+  const pad = Math.max(0, (cell - shell.getBoundingClientRect().width) / 2);
+  return `${pad}px`;
+}
+
+/**
+ * 从卡面向上找到左右分栏所在的横向 flex 行。
+ * 卡壳自身是纵向 flex，分组标题也是横向 flex，但它们不是卡面的祖先，不会被命中。
+ */
+function findColumnRow(card: HTMLElement | null, container: HTMLElement): HTMLElement | null {
+  let node = card?.parentElement ?? null;
+  while (node && node !== container) {
+    const style = getComputedStyle(node);
+    if (style.display === 'flex' && style.flexDirection === 'row') return node;
+    node = node.parentElement;
+  }
+  return null;
+}
+
 /**
  * 换卡海报图片预加载与高清 JPEG 导出 Hook
  * 封装了远程图片跨域预加载进度追踪、离屏宽屏容器重绘等待、以及卡片隐形元数据写入全流程
@@ -42,6 +81,91 @@ export function useBoardExport() {
           }),
       ),
     );
+  };
+
+  /**
+   * 把当前已经排好的像素几何写成内联样式，避免 html-to-image 的 foreignObject 重算居中。
+   * 单侧海报格子宽于 160px，`mx-auto` 的左右留白在克隆里会丢失，坐标却按居中结果记录。
+   * 返回还原函数；调用方必须在截图结束后执行，避免污染下一次导出。
+   */
+  const lockMeasuredLayout = (container: HTMLElement): (() => void) => {
+    const cards = Array.from(container.querySelectorAll<HTMLElement>('[data-export-card-id]'));
+    const pins: Array<{ el: HTMLElement; props: Record<string, string> }> = [];
+
+    const flexRow = findColumnRow(cards[0] ?? null, container);
+    if (flexRow) {
+      const rowStyle = getComputedStyle(flexRow);
+      pins.push({ el: flexRow, props: { 'column-gap': rowStyle.columnGap } });
+      for (const child of flexRow.children) {
+        if (!(child instanceof HTMLElement)) continue;
+        const width = usedPx(child, 'width');
+        if (!width) continue;
+        // flex-1 的基准是 0%，只写 width 挡不住分栏在克隆里重新伸展
+        pins.push({
+          el: child,
+          props: {
+            width,
+            'min-width': '0px',
+            'flex-grow': '0',
+            'flex-shrink': '0',
+            'flex-basis': width,
+          },
+        });
+      }
+    }
+
+    const seenGrids = new Set<HTMLElement>();
+    for (const card of cards) {
+      const shell = card.parentElement;
+      if (!(shell instanceof HTMLElement)) continue;
+      const shellWidth = usedPx(shell, 'width');
+      const grid = shell.parentElement;
+      const gridStyle = grid instanceof HTMLElement ? getComputedStyle(grid) : null;
+      const tracks = gridStyle?.display === 'grid' ? gridStyle.gridTemplateColumns : '';
+      if (shellWidth) {
+        pins.push({
+          el: shell,
+          props: {
+            width: shellWidth,
+            'max-width': 'none',
+            'margin-left':
+              grid instanceof HTMLElement && tracks ? centeredMarginLeft(shell, grid, tracks) : '0px',
+            'margin-right': '0px',
+            'justify-self': 'start',
+          },
+        });
+      }
+
+      if (!(grid instanceof HTMLElement) || !gridStyle || seenGrids.has(grid)) continue;
+      if (gridStyle.display !== 'grid') continue;
+      seenGrids.add(grid);
+      const gridWidth = usedPx(grid, 'width');
+      if (!gridWidth || !tracks) continue;
+      pins.push({
+        el: grid,
+        props: {
+          width: gridWidth,
+          'grid-template-columns': gridStyle.gridTemplateColumns,
+          'column-gap': gridStyle.columnGap,
+          'row-gap': gridStyle.rowGap,
+        },
+      });
+    }
+
+    const restores = pins.map(({ el, props }) => {
+      const prev = el.getAttribute('style');
+      for (const [name, value] of Object.entries(props)) {
+        el.style.setProperty(name, value, 'important');
+      }
+      return () => {
+        if (prev == null) el.removeAttribute('style');
+        else el.setAttribute('style', prev);
+      };
+    });
+
+    return () => {
+      for (const restore of restores) restore();
+    };
   };
 
   /**
@@ -108,8 +232,10 @@ export function useBoardExport() {
       // 预留 1000ms 缓冲，确保离屏 1400px 宽屏容器中的图片与字体已完成排版重绘
       setTimeout(async () => {
         let downloadUrl: string | null = null;
+        let restoreLayout = () => {};
         try {
           if (!exportRef.current) return;
+          restoreLayout = lockMeasuredLayout(exportRef.current);
           const embeddedCards = collectEmbeddedCards(exportRef.current, visibleCards);
 
           const dataUrl = await toJpeg(exportRef.current, {
@@ -137,6 +263,7 @@ export function useBoardExport() {
           console.error('海报生成失败:', err);
           alert('生成图片失败，请重试或使用纯净截图模式');
         } finally {
+          restoreLayout();
           if (downloadUrl) {
             const urlToRevoke = downloadUrl;
             setTimeout(() => URL.revokeObjectURL(urlToRevoke), 5000);
