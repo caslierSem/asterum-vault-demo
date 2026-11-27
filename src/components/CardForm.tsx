@@ -9,8 +9,11 @@ import {
 } from '@/lib/cardFields';
 import { labelClass, primaryButtonClass } from '@/lib/formStyles';
 import { compressCardImage } from '@/lib/imageCompression';
+import { createUuid } from '@/lib/uuid';
 import { useTags } from '@/lib/useTags';
 import CardDetailFields from '@/components/CardDetailFields';
+import { SwitchEntryModeButton } from '@/components/EntryModeSelector';
+import ImageCropDialog from '@/components/ImageCropDialog';
 import ImportReview, { type ImportDraft } from '@/components/ImportReview';
 
 const MAX_IMAGE_BYTES = 20 * 1024 * 1024;
@@ -18,9 +21,11 @@ const MAX_BATCH_SIZE = 6;
 
 interface CardFormProps {
   prefill: CardPrefill | null;
+  /** 回到录入方式选择页；不参与保存与裁剪 */
+  onSwitchMode?: () => void;
 }
 
-export default function CardForm({ prefill }: CardFormProps) {
+export default function CardForm({ prefill, onSwitchMode }: CardFormProps) {
   const [values, setValues] = useState<CardFieldValues>(prefill?.values ?? DEFAULT_FIELD_VALUES);
   const [tagIds, setTagIds] = useState<string[]>(prefill?.tagIds ?? []);
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -36,6 +41,8 @@ export default function CardForm({ prefill }: CardFormProps) {
   const [isBatchProcessing, setIsBatchProcessing] = useState(false);
   const [progress, setProgress] = useState({ current: 0, total: 0 });
   const [isDragging, setIsDragging] = useState(false); // 新增：拖拽高亮状态
+  /** 单张选图后的待裁剪源文件；取消/确认后必须 revoke url */
+  const [cropSource, setCropSource] = useState<{ file: File; url: string } | null>(null);
 
   useEffect(() => {
     const imageUrl = prefill?.imageUrl;
@@ -85,6 +92,15 @@ export default function CardForm({ prefill }: CardFormProps) {
     };
   }, [imagePreview]);
 
+  /**
+   * 内存回收保护：裁剪弹窗关闭或组件卸载时释放待裁剪图的 Object URL
+   */
+  useEffect(() => {
+    return () => {
+      if (cropSource) URL.revokeObjectURL(cropSource.url);
+    };
+  }, [cropSource]);
+
 
   const updateValues = (patch: Partial<CardFieldValues>) => {
     setValues((prev) => ({ ...prev, ...patch }));
@@ -99,7 +115,7 @@ export default function CardForm({ prefill }: CardFormProps) {
       return;
     }
 
-    // 单图逻辑
+    // 单图：先打开裁剪弹窗，确认/跳过后再压缩
     if (files.length === 1) {
       const file = files[0];
       if (!file.type.startsWith('image/')) {
@@ -110,19 +126,12 @@ export default function CardForm({ prefill }: CardFormProps) {
         setMessage({ type: 'error', text: '图片太大，请选择 20MB 以内的图片。' });
         return;
       }
-      
-      setImageBusy(true);
+
       setMessage(null);
-      try {
-        const compressed = await compressCardImage(file);
-        if (imagePreview) URL.revokeObjectURL(imagePreview);
-        setImageFile(compressed);
-        setImagePreview(URL.createObjectURL(compressed));
-      } catch (err) {
-        setMessage({ type: 'error', text: err instanceof Error ? err.message : '图片处理失败。' });
-      } finally {
-        setImageBusy(false);
-      }
+      setCropSource((prev) => {
+        if (prev) URL.revokeObjectURL(prev.url);
+        return { file, url: URL.createObjectURL(file) };
+      });
       return;
     }
 
@@ -146,7 +155,7 @@ export default function CardForm({ prefill }: CardFormProps) {
       try {
         const compressed = await compressCardImage(file);
         drafts.push({
-          id: crypto.randomUUID(),
+          id: createUuid(),
           image: compressed,
           previewUrl: URL.createObjectURL(compressed),
           values: { ...DEFAULT_FIELD_VALUES },
@@ -199,6 +208,43 @@ export default function CardForm({ prefill }: CardFormProps) {
     if (files && files.length > 0) void processFiles(files);
   };
 
+  const applyCompressedImage = async (file: File) => {
+    setImageBusy(true);
+    setMessage(null);
+    try {
+      const compressed = await compressCardImage(file);
+      if (imagePreview) URL.revokeObjectURL(imagePreview);
+      setImageFile(compressed);
+      setImagePreview(URL.createObjectURL(compressed));
+    } catch (err) {
+      setMessage({ type: 'error', text: err instanceof Error ? err.message : '图片处理失败。' });
+    } finally {
+      setImageBusy(false);
+    }
+  };
+
+  const closeCropDialog = () => {
+    setCropSource((prev) => {
+      if (prev) URL.revokeObjectURL(prev.url);
+      return null;
+    });
+  };
+
+  const handleCropConfirm = (file: File) => {
+    closeCropDialog();
+    void applyCompressedImage(file);
+  };
+
+  const handleCropSkip = () => {
+    const source = cropSource;
+    closeCropDialog();
+    if (source) void applyCompressedImage(source.file);
+  };
+
+  const handleCropCancel = () => {
+    closeCropDialog();
+  };
+
   const clearImage = () => {
     if (imagePreview) URL.revokeObjectURL(imagePreview);
     setImageFile(null);
@@ -235,17 +281,20 @@ export default function CardForm({ prefill }: CardFormProps) {
 
   if (batchDrafts.length > 0) {
     return (
-      <ImportReview 
-        initialDrafts={batchDrafts} 
-        onComplete={(savedCount) => {
-          // 批量录入结束（保存成功或取消返回）时，立即释放本批次所有压缩图的本地预览内存
-          batchDrafts.forEach((draft) => URL.revokeObjectURL(draft.previewUrl));
-          setBatchDrafts([]); 
-          if (savedCount > 0) {
-            setMessage({ type: 'success', text: `已成功批量保存 ${savedCount} 件物品到库存。` });
-          }
-        }} 
-      />
+      <section className="mx-auto w-full max-w-2xl">
+        {onSwitchMode && <SwitchEntryModeButton onClick={onSwitchMode} />}
+        <ImportReview
+          initialDrafts={batchDrafts}
+          onComplete={(savedCount) => {
+            // 批量录入结束（保存成功或取消返回）时，立即释放本批次所有压缩图的本地预览内存
+            batchDrafts.forEach((draft) => URL.revokeObjectURL(draft.previewUrl));
+            setBatchDrafts([]);
+            if (savedCount > 0) {
+              setMessage({ type: 'success', text: `已成功批量保存 ${savedCount} 件物品到库存。` });
+            }
+          }}
+        />
+      </section>
     );
   }
 
@@ -263,6 +312,7 @@ export default function CardForm({ prefill }: CardFormProps) {
         </div>
       )}
 
+      {onSwitchMode && <SwitchEntryModeButton onClick={onSwitchMode} />}
       <div className="mb-6">
         <h1 className="text-2xl font-semibold text-slate-900">录入新物品</h1>
         <p className="mt-1 text-sm text-slate-500">填写信息后保存，物品会出现在列表中。</p>
@@ -306,7 +356,7 @@ export default function CardForm({ prefill }: CardFormProps) {
               <span className="text-sm">
                 {isDragging ? '松开鼠标，即可上传图片' : '点击选择，或将图片拖拽到此处'}
               </span>
-              <span className="text-xs text-slate-400">最多选 6 张，上传前自动压缩</span>
+              <span className="text-xs text-slate-400">单张可先裁剪/旋转，多选仍直接批量导入（最多 6 张）</span>
               <input type="file" accept="image/*" multiple className="sr-only" onChange={handleImageChange} />
             </label>
           )}
@@ -349,6 +399,16 @@ export default function CardForm({ prefill }: CardFormProps) {
           </button>
         </div>
       </form>
+
+      {cropSource && (
+        <ImageCropDialog
+          imageUrl={cropSource.url}
+          fileName="card.jpg"
+          onConfirm={handleCropConfirm}
+          onSkip={handleCropSkip}
+          onCancel={handleCropCancel}
+        />
+      )}
     </section>
   );
 }

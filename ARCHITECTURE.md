@@ -18,13 +18,14 @@
 | 图标 | lucide-react 0.446 | 全站唯一图标来源 |
 | 后端 | Supabase JS v2 | 浏览器直连数据库，无自建服务器，无 Edge Functions |
 | 图片导出 | html-to-image / html2canvas | 换卡海报的客户端高清截图 |
+| 图片裁剪 | react-easy-crop | 单卡录入前的前端裁剪与旋转 |
 
 ### 1.2 目录结构与职责
 
 ```
 src/
 ├── main.tsx                    # 应用入口，挂载 <App/>
-├── App.tsx                     # 顶层壳：角色解析、导航栏、视图路由（useState 切换，非路由库）
+├── App.tsx                     # 顶层壳：角色解析、导航栏、视图路由（useState 切换，非路由库）；顶栏「录入」统一进入方式选择页，单/多图与拼图子页保持高亮
 ├── index.css                   # Tailwind 入口
 ├── lib/                        # 数据层与纯逻辑层（不含 JSX）
 │   ├── supabase.ts             # Supabase 客户端单例；自定义 fetch 拦截器向每个请求注入 x-client-info 口令头
@@ -45,6 +46,8 @@ src/
 │   ├── cardStatus.ts           # 完备度状态机：short/complete/surplus 徽标文案与配色，含“已凑齐 + 在途”的 * 号规则
 │   ├── cardDetection.ts        # 截图录入识别引擎：两阶段背景检测、动态分辨率下限、标签剥离与一维投影谷底切分
 │   ├── imageCompression.ts     # 上传前图片压缩（Canvas 重绘为 JPEG）
+│   ├── imageCrop.ts            # 单卡录入裁剪：按像素区域与旋转角度导出 JPEG
+│   ├── uuid.ts                 # UUID v4：优先 randomUUID，非安全上下文回退 getRandomValues
 │   └── formStyles.ts           # 全站复用的输入框/按钮/下拉样式类常量
 └── components/
     ├── BrandLogo.tsx           # 品牌标识
@@ -54,7 +57,9 @@ src/
     ├── CardList.tsx            # 列表页：统计栏、筛选器、分页（每页 48）、/ 键聚焦搜索
     ├── CardListItem.tsx        # 单张卡片：图片骨架屏、库存快调 +/-、状态徽标、快捷操作
     ├── CardThumbnail.tsx       # 卡图缩略图
-    ├── CardForm.tsx            # 录入页：单卡录入 + 批量截图导入 + 拖拽上传
+    ├── CardForm.tsx            # 录入页：单卡录入（选 1 张先裁剪）+ 批量导入 + 拖拽上传；顶部可切回录入方式选择页
+    ├── EntryModeSelector.tsx   # 录入方式选择页：单/多图与拼图两张大卡片，并导出子页「切换录入方式」按钮
+    ├── ImageCropDialog.tsx     # 单卡图片裁剪/旋转弹窗（createPortal 挂到 body）
     ├── CardDetailFields.tsx    # 卡片表单字段区（录入/编辑共用）
     ├── CardEditDialog.tsx      # 编辑弹窗：保存/删除/复制并新建
     ├── CardNoteDialog.tsx      # 备注查看弹窗
@@ -63,7 +68,7 @@ src/
     ├── TagManager.tsx          # 主题管理页：层级树、兄弟排序、增删改
     ├── TagPicker.tsx           # 主题多选（含上限 3 的提示），支持在录入/编辑卡片时现场新建主题并自动选中
     ├── TagFilterInput.tsx      # 按主题筛选的输入区
-│   ├── ScreenshotImport.tsx    # 截图与海报上传入口：优先解析海报原图元数据无损还原，缺失时降级走图像识别切图
+│   ├── ScreenshotImport.tsx    # 截图与海报上传入口：优先解析海报原图元数据无损还原，缺失时降级走图像识别切图；顶部可切回录入方式选择页
 │   ├── ImportReview.tsx        # 截图识别结果复核（支持根据是否已还原元数据智能控制批量默认值弹窗）
     ├── OrdersPage.tsx          # 订单页：搜索、状态筛选、订单列表
     ├── OrderForm.tsx           # 新建订单表单
